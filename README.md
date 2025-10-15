@@ -1,7 +1,9 @@
 # Satelit_Grup3
 Grup format per Èlia, Carlos i Llorenç
 
-##Requisists 1ª Entrega:
+## Requisists 1ª Entrega:
+- [ ] https://github.com/llorencvila/Satelit_Grup3/issues/3
+- [ ] https://github.com/llorencvila/Satelit_Grup3/issues/2 
 - [x] El controlador capta correctamente los datos de humedad y temperatura.
 - [X] La estación de tierra recibe correctamente los datos que le envía el controlador y los muestra en una gráfica dinámica.
 - [ ] La gráfica dinámica está incrustada en la interfaz gráfica.
