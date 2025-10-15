@@ -7,18 +7,21 @@ void setup() {
   mySerial.begin(9600);
 }
 void loop() {
+  
   if (mySerial.available()) {
     String data = mySerial.readString();
     Serial.print(data);
-  }
+  } 
 
   if (Serial.available()) {
     String dataPc = Serial.readString();
     if (dataPc == "STOP") {
       mySerial.println("STOP");
+      digitalWrite(5,HIGH);
 
     } else if (dataPc == "REANUDAR") {
       mySerial.println("REANUDAR");
+      digitalWrite(5,LOW);
     }
   }
 }
