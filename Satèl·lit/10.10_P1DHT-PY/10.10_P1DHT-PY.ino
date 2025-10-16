@@ -20,7 +20,6 @@ void setup(){
   dht.begin();
 
   NextMillis = millis()+interval;
-  pinMode(8, OUTPUT);
 
   }
 void DHTSendData(){
@@ -44,11 +43,10 @@ void DHTSendData(){
 void loop() {
   if (mySerial.available()) {
     data = mySerial.readString();
-    data.trim();
+    data.trim(); //elimina tots els caràcters que no siguin lletres. Essencial per poder fer els if's seguents
     Serial.print(data);
     }
   if (data == "REANUDAR"){
-    digitalWrite(8,LOW);
     Serial.println("Reanudem");
     if (millis() >=NextMillis){
       DHTSendData();
@@ -57,7 +55,6 @@ void loop() {
     
 
     } else if (data == "STOP"){
-      digitalWrite(8,HIGH);
       Serial.println("Parant");
     } else{
       Serial.println("Sense_Dades");
