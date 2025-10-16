@@ -48,8 +48,8 @@ def recepcion():
                 print(contact)
                 print(float(data[1]))
 
-#threadRecepcion = threading.Thread (target = recepcion)
-#threadRecepcion.start()
+threadRecepcion = threading.Thread (target = recepcion)
+threadRecepcion.start()
 
 #def inicar():
     
@@ -76,5 +76,6 @@ BStop.grid(row=3, column=1, padx=5, pady=4, sticky=N + S + E + W)
 EstatBar = Frame(window,)
 tituloLabel.grid(row=3, column=2, columnspan=1, padx=1, pady=1, sticky=N + S + E + W)
 """
+
 
 window.mainloop()
