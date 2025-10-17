@@ -15,3 +15,17 @@ Grup format per Èlia, Carlos i Llorenç
 - [X] Se han añadido comentarios clarificadores.
 - [ ] fer millor el readme
 - [ ] Video
+
+
+def GrafiquesSeparades(): #Funció per crear una sol element amb dues gràfiques (Temperatura i humitat)
+   plt.subplot(2,1,1)
+   plt.title("Temp (º) / t (s)")
+   plt.plot(contact, histT)
+   plt.subplot(2,1,2)
+   plt.title("Hum (%) / t (s)")
+   plt.plot(contact, histH)
+
+   plt.show()
+   return
+
+   
