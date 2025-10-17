@@ -13,6 +13,10 @@ const int DHTPin = 5;
 
 DHT dht(DHTPin, DHTTYPE);
 
+unsigned long lastDHTMillis = 0;     // Guarda el último momento de lectura válida
+unsigned long tiempoAlarma = 5000;  
+bool alarmaActiva = false;           
+
 void setup(){
   Serial.begin(9600);
 
@@ -36,6 +40,8 @@ void DHTSendData(){
     mySerial.print(h);
     mySerial.print(":");
     mySerial.println(t);
+    lastDHTMillis = millis();   // actualiza el tiempo de la última lectura
+    alarmaActiva = false;       // desactiva la alarma si había saltado
       }
   return;
   }
