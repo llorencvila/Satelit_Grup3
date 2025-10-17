@@ -46,18 +46,22 @@ void loop() {
     data.trim(); //elimina tots els caràcters que no siguin lletres. Essencial per poder fer els if's seguents
     Serial.print(data);
     }
-  if (data == "REANUDAR"){
-    Serial.println("Reanudem");
+
+  if (data == "REANUDAR" || data == "INICIAR"){
     if (millis() >=NextMillis){
       DHTSendData();
       NextMillis = millis()+interval;
       }
-    
-
     } else if (data == "STOP"){
       Serial.println("Parant");
     } else{
       Serial.println("Sense_Dades");
+    }
+
+    if ((millis() - lastDHTMillis) > tiempoAlarma && !alarmaActiva) {
+      Serial.println("FALLO");
+      mySerial.println("FALLO");
+      alarmaActiva = true;  
     }
   }
 
