@@ -1,7 +1,7 @@
 # Satelit_Grup3
 Grup format per Èlia, Carlos i Llorenç
 
-#VIdeo
+# Video
 https://www.youtube.com/watch?v=wUZRuor8o5I
 
 ## Requisists 1ª Entrega:
