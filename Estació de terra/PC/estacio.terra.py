@@ -32,6 +32,19 @@ def resume():
     mySerial.write(mensaje.encode('utf-8'))
     print("REANUDAR")
 
+def error():
+    print ("FALLO EN LA TRANSMISION DE DATOS")
+    return
+def GrafiquesSeparades(): #Funció per crear una sol element amb dues gràfiques (Temperatura i humitat) 
+    plt.subplot(2,1,1) 
+    plt.title("Temp (º) / t (s)") 
+    plt.plot(contact, histT) 
+    plt.subplot(2,1,2) 
+    plt.title("Hum (%) / t (s)") 
+    plt.plot(contact, histH)
+    plt.pause(0.5)
+    return
+
 def recepcion():
     while True:
         if mySerial.in_waiting > 0:
@@ -45,6 +58,10 @@ def recepcion():
                 #print(temps())
                 histH.append(float(data[0]))
                 histT.append(float(data[1])) 
+            elif data == "FALLO":
+                error()
+
+        GrafiquesSeparades
 
 
 threadRecepcion = threading.Thread (target = recepcion)
@@ -52,17 +69,6 @@ threadRecepcion.start()
 
 #def inicar():
 
-
-def GrafiquesSeparades(): #Funció per crear una sol element amb dues gràfiques (Temperatura i humitat) 
-    plt.subplot(2,1,1) 
-    plt.title("Temp (º) / t (s)") 
-    plt.plot(contact, histT) 
-    plt.subplot(2,1,2) 
-    plt.title("Hum (%) / t (s)") 
-    plt.plot(contact, histH)
-    return
-
-GrafiquesSeparades()
 plt.show() 
     
 
@@ -83,6 +89,8 @@ Binici.grid(row=3, column=0, padx=5, pady=4, sticky=N + S + E + W)
 
 BStop = Button(window, text="Stop", bg='red', fg="white",command=stop)
 BStop.grid(row=3, column=1, padx=5, pady=4, sticky=N + S + E + W)
+ReanudarButton = Button(window, text="Reanudar", bg='yellow', fg="black",command=resume)
+ReanudarButton.grid(row=1, column=2, padx=5, pady=5, sticky=N + S + E + W)
 
 """
 EstatBar = Frame(window,)
