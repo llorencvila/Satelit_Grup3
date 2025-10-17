@@ -5,7 +5,7 @@ import time
 import threading
 
 
-device = 'COM3'
+device = 'COM10'
 mySerial = serial.Serial(device, 9600)
 print("funcionant:")
 
@@ -35,6 +35,7 @@ def resume():
 def error():
     print ("FALLO EN LA TRANSMISION DE DATOS")
     return
+
 def GrafiquesSeparades(): #Funció per crear una sol element amb dues gràfiques (Temperatura i humitat) 
     plt.subplot(2,1,1) 
     plt.title("Temp (º) / t (s)") 
@@ -42,7 +43,7 @@ def GrafiquesSeparades(): #Funció per crear una sol element amb dues gràfiques
     plt.subplot(2,1,2) 
     plt.title("Hum (%) / t (s)") 
     plt.plot(contact, histH)
-    plt.pause(0.5)
+ 
     return
 
 def recepcion():
@@ -60,8 +61,11 @@ def recepcion():
                 histT.append(float(data[1])) 
             elif data == "FALLO":
                 error()
+                print("Error a la recepció de dades")
 
-        GrafiquesSeparades
+        GrafiquesSeparades()
+        plt.pause(0.5)
+
 
 
 threadRecepcion = threading.Thread (target = recepcion)
@@ -70,7 +74,7 @@ threadRecepcion.start()
 #def inicar():
 
 plt.show() 
-    
+   
 
 window = Tk()
 window.geometry("400x400")
@@ -89,6 +93,7 @@ Binici.grid(row=3, column=0, padx=5, pady=4, sticky=N + S + E + W)
 
 BStop = Button(window, text="Stop", bg='red', fg="white",command=stop)
 BStop.grid(row=3, column=1, padx=5, pady=4, sticky=N + S + E + W)
+
 ReanudarButton = Button(window, text="Reanudar", bg='yellow', fg="black",command=resume)
 ReanudarButton.grid(row=1, column=2, padx=5, pady=5, sticky=N + S + E + W)
 
