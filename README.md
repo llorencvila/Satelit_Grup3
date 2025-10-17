@@ -2,7 +2,7 @@
 Grup format per Èlia, Carlos i Llorenç
 
 #VIdeo
-El video s'està renderitzant
+https://www.youtube.com/watch?v=wUZRuor8o5I
 
 ## Requisists 1ª Entrega:
 - [ ] https://github.com/llorencvila/Satelit_Grup3/issues/3
