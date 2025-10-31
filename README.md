@@ -1,3 +1,4 @@
+**Nota, les dates de les milestone pot ser que no siguin del tot correcte**
 # Satelit_Grup3
 Grup format per Èlia, Carlos i Llorenç
 
