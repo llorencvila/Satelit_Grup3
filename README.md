@@ -4,7 +4,9 @@ Grup format per Èlia, Carlos i Llorenç
 
 # Video 1ª Entrega
 https://www.youtube.com/watch?v=wUZRuor8o5I
-
+## Organigrama 2ª entrega
+[https://docs.google.com/spreadsheets/d/1V03nwSN4Qgww2q2C-urp8QdjpU71eczaaE-8ALJhC-Y/edit?usp=sharing
+](url)
 ## Requisits 2ª Entrega:
 - [ ] El controlador capta correctamente los datos de humedad, temperatura y distancia.
 - [ ]  La estación de tierra recibe correctamente los datos que le envía el controlador y los muestra en gráficas dinámicas apropiadas.
