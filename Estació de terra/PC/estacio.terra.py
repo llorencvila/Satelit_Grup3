@@ -4,14 +4,18 @@ import serial
 import time
 import threading
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import random
+
+
+Debug_RecepcioSimulada = False #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. És d'utilitat per fer proves amb el codi si no es disposa del maquinari físic (els dos arduinos)
 
 # ───────────────────────────────────────────────
 # CONFIGURACIÓ DEL PORT SÈRIE 
 # ───────────────────────────────────────────────
-device = 'COM10'
-mySerial = serial.Serial(device, 9600)
-print("funcionant:")
-#mySerial = None  # permet provar el codi sense Arduino
+if Debug_RecepcioSimulada == False:
+    device = 'COM10'
+    mySerial = serial.Serial(device, 9600)
+    print("funcionant:")
 
 # ───────────────────────────────────────────────
 # VARIABLES GLOBALS
@@ -91,20 +95,24 @@ canvas.draw()
 # ───────────────────────────────────────────────
 def recepcion():
     while running:
-        if mySerial and mySerial.in_waiting > 0:
-            linea = mySerial.readline().decode('utf-8').rstrip()
-            data = linea.split(':') #Type list // data[x] = Type: str
+        if Debug_RecepcioSimulada == False :
+            if mySerial and mySerial.in_waiting > 0:
+                linea = mySerial.readline().decode('utf-8').rstrip()
+                data = linea.split(':') #Type list // data[x] = Type: str
 
-            if len(data) == parametres: #Comprovació que rebem totes les dades
-                contact.append(int(temps()))
-                print("Humitat:", data[0])
-                print("Temp:   ", data[1]) 
-                #print(temps())
-                histH.append(float(data[0]))
-                histT.append(float(data[1])) 
-            elif data == "FALLO":
-                error()
-                print("Error a la recepció de dades")
+                if len(data) == parametres: #Comprovació que rebem totes les dades
+                    contact.append(int(temps()))
+                    print("Humitat:", data[0])
+                    print("Temp:   ", data[1]) 
+                    #print(temps())
+                    histH.append(float(data[0]))
+                    histT.append(float(data[1])) 
+                elif data == "FALLO":
+                    error()
+                    print("Error a la recepció de dades")
+        else:
+            histH.append("%.2f" % random.random(0,100))
+            histT.append("%.2f" % random.random(10,25)) 
         time.sleep(0.1)
 
 # ───────────────────────────────────────────────
@@ -130,6 +138,7 @@ def actualitzar_grafica():
 # ───────────────────────────────────────────────
 # LLANÇAR FIL I INICIAR GUI
 # ───────────────────────────────────────────────
+ 
 threadRecepcion = threading.Thread(target=recepcion, daemon=True)
 threadRecepcion.start()
 
