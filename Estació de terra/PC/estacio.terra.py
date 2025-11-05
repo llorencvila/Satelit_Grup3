@@ -7,7 +7,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import random
 
 
-Debug_RecepcioSimulada = False #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. És d'utilitat per fer proves amb el codi si no es disposa del maquinari físic (els dos arduinos)
+Debug_RecepcioSimulada = True #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. És d'utilitat per fer proves amb el codi si no es disposa del maquinari físic (els dos arduinos)
 
 # ───────────────────────────────────────────────
 # CONFIGURACIÓ DEL PORT SÈRIE 
@@ -31,22 +31,26 @@ running = True  # control del fil
 # ───────────────────────────────────────────────
 # FUNCIONS AUXILIARS
 # ───────────────────────────────────────────────
+print ("Funcionant")
 def temps():
     return time.time() - t0
 
 def stop():
-    mensaje = "STOP"
-    mySerial.write(mensaje.encode('utf-8'))
+    if Debug_RecepcioSimulada == False:
+        mensaje = "STOP"
+        mySerial.write(mensaje.encode('utf-8'))
     print("STOP")
     #mySerial.close
 
 def resume():
-    mensaje = "REANUDAR"
-    mySerial.write(mensaje.encode('utf-8'))
+    if Debug_RecepcioSimulada == False:
+        mensaje = "REANUDAR"
+        mySerial.write(mensaje.encode('utf-8'))
     print("REANUDAR")
 
 def error():
     print("FALLO EN LA TRANSMISSIÓ DE DADES")
+
 
 # ───────────────────────────────────────────────
 # FINESTRA PRINCIPAL TKINTER
@@ -110,19 +114,25 @@ def recepcion():
                 elif data == "FALLO":
                     error()
                     print("Error a la recepció de dades")
-        else:
-            histH.append("%.2f" % random.random(0,100))
-            histT.append("%.2f" % random.random(10,25)) 
-        time.sleep(0.1)
+        else: 
+                histH.append(float("%.2f" % random.uniform(0,100)))
+                histT.append(float("%.2f" % random.uniform(10,25)))
+                contact.append(int(temps()))
+                print(histH)
+                print(contact)
+                time.sleep(0.5)
+        
+        #actualitzar_grafica()
+        #plt.pause(0.5)
 
 # ───────────────────────────────────────────────
 # ACTUALITZACIÓ DE LA GRÀFICA DINS TKINTER
 # ───────────────────────────────────────────────
 def actualitzar_grafica():
-    if contact:
+    if contact: #No acabo d'entendre pq es fa servir if contact
         lineT.set_data(contact, histT)
         lineH.set_data(contact, histH)
-
+        print("Grafica actuaitzant-se")
         axT.set_xlim(max(0, contact[-1]-60), contact[-1]+5)
         axH.set_xlim(max(0, contact[-1]-60), contact[-1]+5)
 
@@ -139,17 +149,18 @@ def actualitzar_grafica():
 # LLANÇAR FIL I INICIAR GUI
 # ───────────────────────────────────────────────
  
-threadRecepcion = threading.Thread(target=recepcion, daemon=True)
+threadRecepcion = threading.Thread(target=recepcion)
 threadRecepcion.start()
 
 # iniciar actualització periòdica
-window.after(500, actualitzar_grafica)
+window.after(50, actualitzar_grafica)
 
 def on_close():
     global running
     running = False
-    if mySerial:
-        mySerial.close()
+    if Debug_RecepcioSimulada == False:
+        if mySerial:
+            mySerial.close()
     window.destroy()
 
 window.protocol("WM_DELETE_WINDOW", on_close)
