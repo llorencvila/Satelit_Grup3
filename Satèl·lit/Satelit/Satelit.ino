@@ -3,7 +3,7 @@
 #include <SoftwareSerial.h>
 
 SoftwareSerial mySerial(10, 11); // RX, TX (azul, naranja)
-int interval = 1000;
+int interval = 500;
 String data;
 unsigned long NextMillis;
 
@@ -60,9 +60,9 @@ void loop() {
       }
     } else if (data == "STOP"){
       Serial.println("Parant");
-    } else{
-      Serial.println("Sense_Dades");
-    }
+    } //else{
+    //  Serial.println("Sense_Dades");
+    //}
 
     if ((millis() - lastDHTMillis) > tiempoAlarma && !alarmaActiva) {
       Serial.println("FALLO");

@@ -7,13 +7,13 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import random
 
 
-Debug_RecepcioSimulada = True #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. És d'utilitat per fer proves amb el codi si no es disposa del maquinari físic (els dos arduinos)
+Debug_RecepcioSimulada = False #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. És d'utilitat per fer proves amb el codi si no es disposa del maquinari físic (els dos arduinos)
 
 # ───────────────────────────────────────────────
 # CONFIGURACIÓ DEL PORT SÈRIE 
 # ───────────────────────────────────────────────
 if Debug_RecepcioSimulada == False:
-    device = 'COM10'
+    device = 'COM5'
     mySerial = serial.Serial(device, 9600)
     print("funcionant:")
 
@@ -26,7 +26,6 @@ histH = []
 histT = []
 contact = []
 parametres = 2
-running = True  # control del fil
 
 # ───────────────────────────────────────────────
 # FUNCIONS AUXILIARS
@@ -98,7 +97,7 @@ canvas.draw()
 # FIL DE RECEPCIÓ DE DADES
 # ───────────────────────────────────────────────
 def recepcion():
-    while running:
+    while True:
         if Debug_RecepcioSimulada == False :
             if mySerial and mySerial.in_waiting > 0:
                 linea = mySerial.readline().decode('utf-8').rstrip()
