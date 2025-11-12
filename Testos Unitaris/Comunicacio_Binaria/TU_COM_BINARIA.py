@@ -12,7 +12,7 @@ Arguments = {
         "temp":0b000,
         "hum":0b001,
         "dist":0b010,
-        "angRad":0b011,    
+        "angrad":0b011,    
     },
     "alarma" : {
         "temp":0b000,
