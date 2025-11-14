@@ -243,4 +243,4 @@ print (DesxifrarMissatge(mensaje))
 #print (type(DesxifrarMissatge(13781632)))
 
 #print(IEEE754aFloat("0100101010000000"))
-#010 010 0100101010000000
+#010 010 0100101010000000s
