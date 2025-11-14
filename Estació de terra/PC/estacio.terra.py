@@ -15,7 +15,7 @@ Debug_RecepcioSimulada = False #En cas de ser True s'inventarà les dades de rec
 # CONFIGURACIÓ DEL PORT SÈRIE 
 # ───────────────────────────────────────────────
 if Debug_RecepcioSimulada == False:
-    device = 'COM7'
+    device = 'COM3'
     mySerial = serial.Serial(device, 9600)
     print("funcionant:")
 
@@ -29,7 +29,7 @@ histT = []
 histAng = []
 histDist = []
 contact = []
-parametres = 2
+parametres = 4
 
 # ───────────────────────────────────────────────
 # FUNCIONS AUXILIARS HUMITAT I TEMPERATURA
@@ -40,14 +40,14 @@ def temps():
 
 def stopHT():
     if Debug_RecepcioSimulada == False:
-        mensaje = "STOPHT"
+        mensaje = "STOP"
         mySerial.write(mensaje.encode('utf-8'))
     print("STOP")
     #mySerial.close
 
 def resumeHT():
     if Debug_RecepcioSimulada == False:
-        mensaje = "REANUDARHT"
+        mensaje = "REANUDAR"
         mySerial.write(mensaje.encode('utf-8'))
     print("REANUDAR")
 
@@ -55,12 +55,12 @@ def error():
     print("FALLO EN LA TRANSMISSIÓ DE DADES")
 
 def canvi_periodeHT():
-    periode_transmisio = "periodeHT" +fraseHTEntry.get()
+    periode_transmisio = "periode" +fraseHTEntry.get()
     mySerial.write(periode_transmisio)
     print ('Has canviat el periode de transimsio a --- ' + fraseHTEntry.get())
 
 # ───────────────────────────────────────────────
-# FUNCIONS AUXILIARS distancia
+# FUNCIONS AUXILIARS DISTANCIA
 # ───────────────────────────────────────────────
 
 def stop_dist():
@@ -165,6 +165,8 @@ graf_dist_frame.columnconfigure(0, weight=1)
 # ───────────────────────────────────────────────
 # CONFIGURACIÓ DE LA FIGURA MATPLOTLIB
 # ───────────────────────────────────────────────
+
+#Grafica HT
 fig, (axT, axH) = plt.subplots(2, 1, figsize=(5, 3), sharex=True)
 fig.subplots_adjust(hspace=0.4)
 axT.set_title("Temperatura (°C)")
@@ -178,15 +180,24 @@ axT.set_ylim(0, 50)
 axH.set_ylim(0, 100)
 
 
-#Grafica Radar
-figRad = plt.figure()
-axRad = figRad.add_subplot(projection='polar')
-#cRad = axRad.scatter(AngleRad, DistRad)
-
-# Inserir gràfica a Tkinter
+# Inserir gràfica HT a Tkinter 
 canvas = FigureCanvasTkAgg(fig, master=grafHT_frame)
 canvas.get_tk_widget().grid(row=0, column=0, padx=5, pady=5, sticky=N+S+E+W)
 canvas.draw()
+
+
+#Grafica Radar
+figdist = plt.figure()
+axdist = figdist.add_subplot(projection='polar')
+axdist.set_thetamin(0)
+axdist.set_thetamax(180)
+#cRad = axRad.scatter(AngleRad, DistRad)
+
+# Inserir gràfica dist a Tkinter 
+canvas = FigureCanvasTkAgg(figdist, master=graf_dist_frame)
+canvas.get_tk_widget().grid(row=0, column=0, padx=5, pady=5, sticky=N+S+E+W)
+canvas.draw()
+
 
 # ───────────────────────────────────────────────
 # FIL DE RECEPCIÓ DE DADES
@@ -202,13 +213,14 @@ def recepcion():
                     contact.append(int(temps()))
                     print("Humitat:", data[0])
                     print("Temp:   ", data[1]) 
-                    print("Pos:", (data[2]/4779)*360)
+                    print("Pos:", (int (data[2])/4779)*360)
                     print("Dist:   ", data[3]) 
                     #print(temps())
                     histH.append(float(data[0]))
                     histT.append(float(data[1]))
                     histAng.append(float(data[2]))
                     histDist.append(float(data[3]))
+                    print (histH)
                 elif data == "FALLO":
                     error()
                     print("Error a la recepció de dades")
@@ -218,21 +230,21 @@ def recepcion():
                 histAng.append(float("%.2f" % random.uniform(0,180)))
                 histDist.append(float("%.2f" % random.uniform(0,100)))
                 contact.append(int(temps()))
-                print(histH)
-                print(contact)
+                #print(histH)
+                #print(contact)
                 time.sleep(0.5)
         
         #actualitzar_grafica()
         #plt.pause(0.5)
 
 # ───────────────────────────────────────────────
-# ACTUALITZACIÓ DE LA GRÀFICA DINS TKINTER
+# ACTUALITZACIÓ DE LA GRÀFICA DINS TKINTER 
 # ───────────────────────────────────────────────
-def actualitzar_grafica():
+def actualitzar_graficaHT():
     if contact: #No acabo d'entendre pq es fa servir if contact
         lineT.set_data(contact, histT)
         lineH.set_data(contact, histH)
-        print("Grafica actuaitzant-se")
+        #print("Grafica actuaitzant-se")
         axT.set_xlim(max(0, contact[-1]-60), contact[-1]+5)
         axH.set_xlim(max(0, contact[-1]-60), contact[-1]+5)
 
@@ -244,11 +256,13 @@ def actualitzar_grafica():
         canvas.draw_idle()
 
         #Grafica Radar
-        cRad = axRad.scatter(data[2], data[3])
+        if (len(histAng)!=0 and len(histDist)!=0):
+            cRad = axdist.scatter(histAng[-1], histDist[-1])
+
 
     # tornar a cridar aquesta funció cada 500 ms
 
-    window.after(500, actualitzar_grafica)
+    window.after(500, actualitzar_graficaHT)
 
 # ───────────────────────────────────────────────
 # LLANÇAR FIL I INICIAR GUI
@@ -258,7 +272,7 @@ threadRecepcion = threading.Thread(target=recepcion)
 threadRecepcion.start()
 
 # iniciar actualització periòdica
-window.after(50, actualitzar_grafica)
+window.after(50, actualitzar_graficaHT)
 
 def on_close():
     global running
