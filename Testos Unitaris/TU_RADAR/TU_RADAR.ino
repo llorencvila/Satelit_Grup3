@@ -14,7 +14,7 @@ Stepper myStepper(stepsPerRotation, OUTPUT1, OUTPUT3, OUTPUT2, OUTPUT4);
 
 int VelMotor = 5; // velocitat màxima (amb la alimentacio del 5v d'arduino), si és més gran el motor es cala
 int pos = 0;
-int interval = 500;
+int interval = 750;
 int Sentit = 1;
 
 unsigned long NextMillis;
@@ -39,8 +39,9 @@ void loop() {
   pos = pos + (Sentit*10);
 
   if (millis() >=NextMillis){
-  int dist = ping(TriggerPin,EchoPin);
+    int dist = ping(TriggerPin,EchoPin);
   NextMillis = millis()+interval;
+  //PART DEBUG
   Serial.print("Dist: ");
   Serial.println(dist);
   Serial.print("Pos: ");

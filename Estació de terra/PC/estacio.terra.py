@@ -1,5 +1,6 @@
 from tkinter import *
 import matplotlib.pyplot as plt
+import numpy as np
 import serial
 import time
 import threading
@@ -7,14 +8,14 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import random
 
 
-Debug_RecepcioSimulada = True #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
+Debug_RecepcioSimulada = False #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
                               #És d'utilitat per fer proves amb el codi si no es disposa del maquinari físic (els dos arduinos)
 
 # ───────────────────────────────────────────────
 # CONFIGURACIÓ DEL PORT SÈRIE 
 # ───────────────────────────────────────────────
 if Debug_RecepcioSimulada == False:
-    device = 'COM5'
+    device = 'COM7'
     mySerial = serial.Serial(device, 9600)
     print("funcionant:")
 
@@ -25,6 +26,8 @@ estat = "Escoltant"
 t0= time.time()
 histH = []
 histT = []
+histAng = []
+histDist = []
 contact = []
 parametres = 2
 
@@ -174,6 +177,12 @@ axT.set_xlim(0, 60)
 axT.set_ylim(0, 50)
 axH.set_ylim(0, 100)
 
+
+#Grafica Radar
+figRad = plt.figure()
+axRad = figRad.add_subplot(projection='polar')
+#cRad = axRad.scatter(AngleRad, DistRad)
+
 # Inserir gràfica a Tkinter
 canvas = FigureCanvasTkAgg(fig, master=grafHT_frame)
 canvas.get_tk_widget().grid(row=0, column=0, padx=5, pady=5, sticky=N+S+E+W)
@@ -193,15 +202,21 @@ def recepcion():
                     contact.append(int(temps()))
                     print("Humitat:", data[0])
                     print("Temp:   ", data[1]) 
+                    print("Pos:", (data[2]/4779)*360)
+                    print("Dist:   ", data[3]) 
                     #print(temps())
                     histH.append(float(data[0]))
-                    histT.append(float(data[1])) 
+                    histT.append(float(data[1]))
+                    histAng.append(float(data[2]))
+                    histDist.append(float(data[3]))
                 elif data == "FALLO":
                     error()
                     print("Error a la recepció de dades")
         else: 
                 histH.append(float("%.2f" % random.uniform(0,100)))
                 histT.append(float("%.2f" % random.uniform(10,25)))
+                histAng.append(float("%.2f" % random.uniform(0,180)))
+                histDist.append(float("%.2f" % random.uniform(0,100)))
                 contact.append(int(temps()))
                 print(histH)
                 print(contact)
@@ -227,7 +242,12 @@ def actualitzar_grafica():
         axH.autoscale_view(scaley=True)
 
         canvas.draw_idle()
+
+        #Grafica Radar
+        cRad = axRad.scatter(data[2], data[3])
+
     # tornar a cridar aquesta funció cada 500 ms
+
     window.after(500, actualitzar_grafica)
 
 # ───────────────────────────────────────────────
