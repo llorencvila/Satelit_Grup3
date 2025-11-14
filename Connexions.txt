@@ -3,6 +3,5 @@
 Vcc   Data   XX   GND
      (Pin 5)
 
-======= TX-RX =======
-
+======= TX-RX ======
  TX:11       RX: 10
