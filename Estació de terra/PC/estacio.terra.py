@@ -7,7 +7,8 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import random
 
 
-Debug_RecepcioSimulada = False #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. És d'utilitat per fer proves amb el codi si no es disposa del maquinari físic (els dos arduinos)
+Debug_RecepcioSimulada = True #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
+                              #És d'utilitat per fer proves amb el codi si no es disposa del maquinari físic (els dos arduinos)
 
 # ───────────────────────────────────────────────
 # CONFIGURACIÓ DEL PORT SÈRIE 
@@ -28,20 +29,45 @@ contact = []
 parametres = 2
 
 # ───────────────────────────────────────────────
-# FUNCIONS AUXILIARS
+# FUNCIONS AUXILIARS HUMITAT I TEMPERATURA
 # ───────────────────────────────────────────────
 print ("Funcionant")
 def temps():
     return time.time() - t0
 
-def stop():
+def stopHT():
+    if Debug_RecepcioSimulada == False:
+        mensaje = "STOPHT"
+        mySerial.write(mensaje.encode('utf-8'))
+    print("STOP")
+    #mySerial.close
+
+def resumeHT():
+    if Debug_RecepcioSimulada == False:
+        mensaje = "REANUDARHT"
+        mySerial.write(mensaje.encode('utf-8'))
+    print("REANUDAR")
+
+def error():
+    print("FALLO EN LA TRANSMISSIÓ DE DADES")
+
+def canvi_periodeHT():
+    periode_transmisio = "periodeHT" +fraseHTEntry.get()
+    mySerial.write(periode_transmisio)
+    print ('Has canviat el periode de transimsio a --- ' + fraseHTEntry.get())
+
+# ───────────────────────────────────────────────
+# FUNCIONS AUXILIARS distancia
+# ───────────────────────────────────────────────
+
+def stop_dist():
     if Debug_RecepcioSimulada == False:
         mensaje = "STOP"
         mySerial.write(mensaje.encode('utf-8'))
     print("STOP")
     #mySerial.close
 
-def resume():
+def resume_dist():
     if Debug_RecepcioSimulada == False:
         mensaje = "REANUDAR"
         mySerial.write(mensaje.encode('utf-8'))
@@ -49,6 +75,12 @@ def resume():
 
 def error():
     print("FALLO EN LA TRANSMISSIÓ DE DADES")
+
+def canvi_periode_dist():
+    periode_transmisio = "periode" +frase_distEntry.get()
+    mySerial.write(periode_transmisio)
+    print ('Has canviat el periode de transimsio a --- ' + frase_distEntry.get())
+    
 
 
 # ───────────────────────────────────────────────
@@ -58,20 +90,74 @@ window = Tk()
 window.geometry("1000x400")
 window.title("Control de transmissió de dades")
 
-window.rowconfigure(0, weight=1)
-window.rowconfigure(1, weight=1)
 window.columnconfigure(0, weight=1)
 window.columnconfigure(1, weight=1)
-window.columnconfigure(2, weight=10)
+window.columnconfigure(2, weight=1)
+window.rowconfigure(0, weight=1)
+window.rowconfigure(1, weight=1)
+window.rowconfigure(2, weight=1)
 
-tituloLabel = Label(window, text="Transmissió de dades", font=("Courier", 20, "italic"))
-tituloLabel.grid(row=0, column=0, columnspan=5, padx=5, pady=5, sticky=N + S + E + W)
 
-IniciarButton = Button(window, text="Play", bg='green', fg="white", command=resume)
-IniciarButton.grid(row=1, column=0, padx=5, pady=5, sticky=N + S + E + W)
+#tituloLabel = Label(window, text="Transmissió de dades", font=("Courier", 20, "italic"))
+#tituloLabel.grid(row=0, column=0, columnspan=5, padx=5, pady=5, sticky=N + S + E + W)
 
-PararButton = Button(window, text="Pausa", bg='red', fg="white", command=stop)
-PararButton.grid(row=1, column=1, padx=5, pady=5, sticky=N + S + E + W)
+# FRAME CONTROLADOR TEMPERATURA I HUMITAT:
+button_HT_frame = LabelFrame(window, text = 'Humitat i Temperatura')
+button_HT_frame.grid(row=0, column=0, padx=5, pady=5, sticky=N + S + E + W)
+
+button_HT_frame.rowconfigure(0, weight=1)
+button_HT_frame.rowconfigure(1, weight=1)
+button_HT_frame.columnconfigure(0, weight=1)
+button_HT_frame.columnconfigure(1, weight=1)
+
+IniciarHTButton = Button(button_HT_frame, text="Play", bg='green', fg="white", command=resumeHT)
+IniciarHTButton.grid(row=0, column=0, padx=5, pady=5, sticky=N + S + E + W)
+
+PararHTButton = Button(button_HT_frame, text="Pausa", bg='red', fg="white", command=stopHT)
+PararHTButton.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
+
+AplicarHTButton = Button(button_HT_frame, text="Aplicar", bg='yellow', fg="white", command=canvi_periodeHT)
+AplicarHTButton.grid(row=1, column=1, padx=5, pady=5, sticky=N + S + E + W)
+
+fraseHTEntry = Entry(button_HT_frame)
+fraseHTEntry.grid(row=1, column=0, columnspan = 1, padx=5, pady=5, sticky=N + S + E + W)
+
+# FRAME CONTROLADOR DADES DE DISTÀNCIA
+
+button_dist_frame = LabelFrame(window, text = 'Sensor de distància')
+button_dist_frame.grid(row=1, column=0, padx=5, pady=5, sticky=N + S + E + W)
+
+button_dist_frame.rowconfigure(0, weight=1)
+button_dist_frame.rowconfigure(1, weight=1)
+button_dist_frame.columnconfigure(0, weight=1)
+button_dist_frame.columnconfigure(1, weight=1)
+
+Iniciar_distButton = Button(button_dist_frame, text="Play", bg='green', fg="white", command=resume_dist)
+Iniciar_distButton.grid(row=0, column=0, padx=5, pady=5, sticky=N + S + E + W)
+
+Parar_distButton = Button(button_dist_frame, text="Pausa", bg='red', fg="white", command=stop_dist)
+Parar_distButton.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
+
+Aplicar_distButton = Button(button_dist_frame, text="Aplicar", bg='yellow', fg="white", command=canvi_periode_dist)
+Aplicar_distButton.grid(row=1, column=1, padx=5, pady=5, sticky=N + S + E + W)
+
+frase_distEntry = Entry(button_dist_frame)
+frase_distEntry.grid(row=1, column=0, columnspan = 1, padx=5, pady=5, sticky=N + S + E + W)
+
+# FRAME GRÀFICA HT
+grafHT_frame = LabelFrame(window, text = 'Gràfica temperatura i humitat')
+grafHT_frame.grid(row=0, column=1, rowspan = 3, padx=5, pady=5, sticky=N + S + E + W)
+
+grafHT_frame.rowconfigure(0, weight=1)
+grafHT_frame.columnconfigure(0, weight=1)
+
+# FRAME GRÀFICA DISTÀNCIA
+graf_dist_frame = LabelFrame(window, text = 'Gràfica sensor de distància')
+graf_dist_frame.grid(row=0, column=2, rowspan = 3, padx=5, pady=5, sticky=N + S + E + W)
+
+graf_dist_frame.rowconfigure(0, weight=1)
+graf_dist_frame.columnconfigure(0, weight=1)
+
 
 # ───────────────────────────────────────────────
 # CONFIGURACIÓ DE LA FIGURA MATPLOTLIB
@@ -89,8 +175,8 @@ axT.set_ylim(0, 50)
 axH.set_ylim(0, 100)
 
 # Inserir gràfica a Tkinter
-canvas = FigureCanvasTkAgg(fig, master=window)
-canvas.get_tk_widget().grid(row=1, column=2, padx=10, pady=10, sticky=N+S+E+W)
+canvas = FigureCanvasTkAgg(fig, master=grafHT_frame)
+canvas.get_tk_widget().grid(row=0, column=0, padx=5, pady=5, sticky=N+S+E+W)
 canvas.draw()
 
 # ───────────────────────────────────────────────
