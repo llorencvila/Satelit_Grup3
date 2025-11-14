@@ -2,8 +2,7 @@
 # Satelit_Grup3
 Grup format per Èlia, Carlos i Llorenç
 # Video 2ª Entrega
-Feina en procés
-
+https://youtu.be/f7alUr-Og3A
 # Video 1ª Entrega
 https://www.youtube.com/watch?v=wUZRuor8o5I
 ## Organigrama 2ª entrega
