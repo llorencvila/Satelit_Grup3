@@ -11,8 +11,9 @@ String data;
 unsigned long NextMillis;
 unsigned long NextMillisRad;
 
+
 #define DHTTYPE DHT11   // DHT 11
-const int DHTPin = 5;   
+const int DHTPin = 2;   
 
 
 DHT dht(DHTPin, DHTTYPE);
@@ -28,14 +29,14 @@ bool alarmaActiva = false;
 #define OUTPUT4   4                // Connected to the Orange coloured wire
 
 const int stepsPerRotation = 4779;  //com que la transmissió es produeix per engranatges hi ha una relació de de 2.3333 (al ser decimal es perd presisció)´
-int VelMotor = ; // velocitat màxima (amb la alimentacio del 5v d'arduino), si és més gran el motor es cala
+int VelMotor = 5; // velocitat màxima (amb la alimentacio del 5v d'arduino), si és més gran el motor es cala
 int pos = 0;
 int Sentit = 1;
-int llargadaSteps = 500;
+int llargadaSteps = 1;
 Stepper myStepper(stepsPerRotation, OUTPUT1, OUTPUT3, OUTPUT2, OUTPUT4);
 
 //Definició Sensor Ultrasons
-const int EchoPin = 6;
+const int EchoPin = 3;
 const int TriggerPin = 9;
 
 void setup(){
@@ -130,9 +131,9 @@ void loop() {
   myStepper.step(Sentit * llargadaSteps);
   pos = pos + (Sentit*llargadaSteps);
 
-  if (millis() >=NextMillis){
+  if (millis() >=NextMillisRad){
     int dist = ping(TriggerPin,EchoPin);
-  NextMillis = millis()+interval;
+  NextMillisRad = millis()+interval;
 
   //REBUDA INFORMACIÓ
   if (mySerial.available()) {
@@ -140,10 +141,15 @@ void loop() {
     data.trim(); //elimina tots els caràcters que no siguin lletres. Essencial per poder fer els if's seguents
     Serial.print(data);
     }
-
+  Serial.println(data);
   //ENVIAR INFORMACIÓ
   if (data == "REANUDAR" || data == "INICIAR"){
+    //Serial.println("HE entrat");
+    //Serial.println(millis());
+    //Serial.println(NextMillis);
+    
     if (millis() >=NextMillis){
+      //Serial.println("estem dins");
       SendData(pos);
       NextMillis = millis()+interval;
       }
