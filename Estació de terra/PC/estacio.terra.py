@@ -8,14 +8,14 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import random
 
 
-Debug_RecepcioSimulada = False #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
+Debug_RecepcioSimulada = True #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
                               #És d'utilitat per fer proves amb el codi si no es disposa del maquinari físic (els dos arduinos)
 
 # ───────────────────────────────────────────────
 # CONFIGURACIÓ DEL PORT SÈRIE 
 # ───────────────────────────────────────────────
 if Debug_RecepcioSimulada == False:
-    device = 'COM7'
+    device = 'COM3'
     mySerial = serial.Serial(device, 9600)
     print("funcionant:")
 
@@ -29,7 +29,10 @@ histT = []
 histAng = []
 histDist = []
 contact = []
-parametres = 2
+parametres = 4
+
+data_lock = threading.Lock()
+
 
 # ───────────────────────────────────────────────
 # FUNCIONS AUXILIARS HUMITAT I TEMPERATURA
@@ -40,14 +43,14 @@ def temps():
 
 def stopHT():
     if Debug_RecepcioSimulada == False:
-        mensaje = "STOPHT"
+        mensaje = "STOP"
         mySerial.write(mensaje.encode('utf-8'))
     print("STOP")
     #mySerial.close
 
 def resumeHT():
     if Debug_RecepcioSimulada == False:
-        mensaje = "REANUDARHT"
+        mensaje = "REANUDAR"
         mySerial.write(mensaje.encode('utf-8'))
     print("REANUDAR")
 
@@ -55,12 +58,12 @@ def error():
     print("FALLO EN LA TRANSMISSIÓ DE DADES")
 
 def canvi_periodeHT():
-    periode_transmisio = "periodeHT" +fraseHTEntry.get()
+    periode_transmisio = "periode" +fraseHTEntry.get()
     mySerial.write(periode_transmisio)
     print ('Has canviat el periode de transimsio a --- ' + fraseHTEntry.get())
 
 # ───────────────────────────────────────────────
-# FUNCIONS AUXILIARS distancia
+# FUNCIONS AUXILIARS DISTANCIA
 # ───────────────────────────────────────────────
 
 def stop_dist():
@@ -76,7 +79,7 @@ def resume_dist():
         mySerial.write(mensaje.encode('utf-8'))
     print("REANUDAR")
 
-def error():
+def error_dist():
     print("FALLO EN LA TRANSMISSIÓ DE DADES")
 
 def canvi_periode_dist():
@@ -90,7 +93,7 @@ def canvi_periode_dist():
 # FINESTRA PRINCIPAL TKINTER
 # ───────────────────────────────────────────────
 window = Tk()
-window.geometry("1000x400")
+window.geometry("10000x800")
 window.title("Control de transmissió de dades")
 
 window.columnconfigure(0, weight=1)
@@ -113,13 +116,13 @@ button_HT_frame.rowconfigure(1, weight=1)
 button_HT_frame.columnconfigure(0, weight=1)
 button_HT_frame.columnconfigure(1, weight=1)
 
-IniciarHTButton = Button(button_HT_frame, text="Play", bg='green', fg="white", command=resumeHT)
+IniciarHTButton = Button(button_HT_frame, text="Play", bg='#6BD66B', fg="white", command=resumeHT)
 IniciarHTButton.grid(row=0, column=0, padx=5, pady=5, sticky=N + S + E + W)
 
-PararHTButton = Button(button_HT_frame, text="Pausa", bg='red', fg="white", command=stopHT)
+PararHTButton = Button(button_HT_frame, text="Pausa", bg='#FFB74D', fg="white", command=stopHT)
 PararHTButton.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
 
-AplicarHTButton = Button(button_HT_frame, text="Aplicar", bg='yellow', fg="white", command=canvi_periodeHT)
+AplicarHTButton = Button(button_HT_frame, text="Aplicar", bg='#4DA3FF', fg="white", command=canvi_periodeHT)
 AplicarHTButton.grid(row=1, column=1, padx=5, pady=5, sticky=N + S + E + W)
 
 fraseHTEntry = Entry(button_HT_frame)
@@ -135,13 +138,13 @@ button_dist_frame.rowconfigure(1, weight=1)
 button_dist_frame.columnconfigure(0, weight=1)
 button_dist_frame.columnconfigure(1, weight=1)
 
-Iniciar_distButton = Button(button_dist_frame, text="Play", bg='green', fg="white", command=resume_dist)
+Iniciar_distButton = Button(button_dist_frame, text="Play", bg='#A8E6A3', fg="white", command=resume_dist)
 Iniciar_distButton.grid(row=0, column=0, padx=5, pady=5, sticky=N + S + E + W)
 
-Parar_distButton = Button(button_dist_frame, text="Pausa", bg='red', fg="white", command=stop_dist)
+Parar_distButton = Button(button_dist_frame, text="Pausa", bg='#FFD59E', fg="white", command=stop_dist)
 Parar_distButton.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
 
-Aplicar_distButton = Button(button_dist_frame, text="Aplicar", bg='yellow', fg="white", command=canvi_periode_dist)
+Aplicar_distButton = Button(button_dist_frame, text="Aplicar", bg='#A9D6F9', fg="white", command=canvi_periode_dist)
 Aplicar_distButton.grid(row=1, column=1, padx=5, pady=5, sticky=N + S + E + W)
 
 frase_distEntry = Entry(button_dist_frame)
@@ -165,6 +168,8 @@ graf_dist_frame.columnconfigure(0, weight=1)
 # ───────────────────────────────────────────────
 # CONFIGURACIÓ DE LA FIGURA MATPLOTLIB
 # ───────────────────────────────────────────────
+
+#Grafica HT
 fig, (axT, axH) = plt.subplots(2, 1, figsize=(5, 3), sharex=True)
 fig.subplots_adjust(hspace=0.4)
 axT.set_title("Temperatura (°C)")
@@ -178,15 +183,27 @@ axT.set_ylim(0, 50)
 axH.set_ylim(0, 100)
 
 
-#Grafica Radar
-figRad = plt.figure()
-axRad = figRad.add_subplot(projection='polar')
-#cRad = axRad.scatter(AngleRad, DistRad)
-
-# Inserir gràfica a Tkinter
+# Inserir gràfica HT a Tkinter 
 canvas = FigureCanvasTkAgg(fig, master=grafHT_frame)
 canvas.get_tk_widget().grid(row=0, column=0, padx=5, pady=5, sticky=N+S+E+W)
 canvas.draw()
+
+
+#Grafica Radar
+figdist = plt.figure(figsize=(5,4))
+axdist = figdist.add_subplot(111, projection='polar')
+axdist.set_thetamin(0)
+axdist.set_thetamax(180)
+axdist.set_ylim(0, 110)   # ajustar segons el rang de distàncies esperat
+
+# Línia que connectarà els punts del radar
+lineRadar, = axdist.plot([], [], linewidth=1)
+
+# Inserir gràfica del radar a Tkinter
+canvasRadar = FigureCanvasTkAgg(figdist, master=graf_dist_frame)
+canvasRadar.get_tk_widget().grid(row=0, column=0, sticky="nsew")
+canvasRadar.draw()
+
 
 # ───────────────────────────────────────────────
 # FIL DE RECEPCIÓ DE DADES
@@ -202,63 +219,116 @@ def recepcion():
                     contact.append(int(temps()))
                     print("Humitat:", data[0])
                     print("Temp:   ", data[1]) 
-                    print("Pos:", (data[2]/4779)*360)
+                    print("Pos:", (int (data[2])/4779)*360)
                     print("Dist:   ", data[3]) 
                     #print(temps())
                     histH.append(float(data[0]))
                     histT.append(float(data[1]))
                     histAng.append(float(data[2]))
                     histDist.append(float(data[3]))
+                    print (histH)
                 elif data == "FALLO":
                     error()
                     print("Error a la recepció de dades")
         else: 
+            with data_lock:
                 histH.append(float("%.2f" % random.uniform(0,100)))
                 histT.append(float("%.2f" % random.uniform(10,25)))
                 histAng.append(float("%.2f" % random.uniform(0,180)))
                 histDist.append(float("%.2f" % random.uniform(0,100)))
                 contact.append(int(temps()))
-                print(histH)
-                print(contact)
-                time.sleep(0.5)
+                #print(histH)
+                #print(contact)
+                threading.Event().wait(0.5)
         
         #actualitzar_grafica()
         #plt.pause(0.5)
 
 # ───────────────────────────────────────────────
-# ACTUALITZACIÓ DE LA GRÀFICA DINS TKINTER
+# ACTUALITZACIÓ DE LA GRÀFICA DINS TKINTER 
 # ───────────────────────────────────────────────
-def actualitzar_grafica():
-    if contact: #No acabo d'entendre pq es fa servir if contact
-        lineT.set_data(contact, histT)
-        lineH.set_data(contact, histH)
-        print("Grafica actuaitzant-se")
-        axT.set_xlim(max(0, contact[-1]-60), contact[-1]+5)
-        axH.set_xlim(max(0, contact[-1]-60), contact[-1]+5)
+#FUNCIÓ PER ACTUALITZAR LA GRÀFICA DE TEMPERATURA I HUMITAT
+def actualitzar_graficaHT():
+    try: 
+        if contact: #No acabo d'entendre pq es fa servir if contact
+            lineT.set_data(contact, histT)
+            lineH.set_data(contact, histH)
+            #print("Grafica actuaitzant-se")
+            axT.set_xlim(max(0, contact[-1]-60), contact[-1]+5)
+            axH.set_xlim(max(0, contact[-1]-60), contact[-1]+5)
 
-        axT.relim()
-        axT.autoscale_view(scaley=True)
-        axH.relim()
-        axH.autoscale_view(scaley=True)
+            axT.relim()
+            axT.autoscale_view(scaley=True)
+            axH.relim()
+            axH.autoscale_view(scaley=True)
 
-        canvas.draw_idle()
+            canvas.draw_idle()
 
-        #Grafica Radar
-        cRad = axRad.scatter(data[2], data[3])
+        window.after(500, actualitzar_graficaHT)
+    
+    except Exception as e:
+        print("ERROR a actualitzar_graficaHT:", e)
 
-    # tornar a cridar aquesta funció cada 500 ms
 
-    window.after(500, actualitzar_grafica)
+
+
+#FUNCIÓ PER ACTUALITZAR LA GRÀFICA DEL RADAR
+def actualitzar_grafica_radar():
+    try:
+        if (len(histAng)!=0 and len(histDist)!=0):
+            # agafar últims N valors
+            N = 10
+            angs = histAng[-N:]
+            r = histDist[-N:]
+
+            # convertir a radians
+            theta = np.radians(angs)
+
+            # Actualitzar la línia que uneix punts
+            lineRadar.set_data(theta, r)
+
+            # Esborrar i tornar a dibuixar només el scatter actual
+            # eliminar collections (punts antics)
+            for c in list(axdist.collections):
+                c.remove()
+
+         # Eliminar totes les línies existents menys la del radar
+            for line in list(axdist.lines):
+                if line is not lineRadar:
+                    axdist.lines.remove(line)
+        
+            if lineRadar not in axdist.lines:
+                axdist.add_line(lineRadar)
+
+            axdist.scatter(theta, r, s=40, color="blue")
+
+
+            # Ajustar escala radial (dinàmic o fixa)
+            axdist.set_ylim(0, max(1, max(r)) + 10)
+
+            canvasRadar.draw_idle()
+
+        window.after(200, actualitzar_grafica_radar)
+
+    except Exception as e:
+        print("ERROR a actualitzar_grafica_radar:", e)
+
+
+
 
 # ───────────────────────────────────────────────
 # LLANÇAR FIL I INICIAR GUI
 # ───────────────────────────────────────────────
  
-threadRecepcion = threading.Thread(target=recepcion)
+threadRecepcion = threading.Thread(target=recepcion, daemon=True)
 threadRecepcion.start()
 
+
 # iniciar actualització periòdica
-window.after(50, actualitzar_grafica)
+window.after(50, actualitzar_graficaHT)
+
+window.after(200, actualitzar_grafica_radar)
+
 
 def on_close():
     global running
