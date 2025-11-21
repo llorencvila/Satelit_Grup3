@@ -58,6 +58,15 @@ void setup(){
 
   }
 
+void GetPeriode (){ 
+  if (mySerial.available()) {
+    periodeHT = linmySerial.readStringea.split(',');
+      if (data[0] == 22)
+        int interval = data [1];
+      if (data[0] == 23)
+        int intervalRad = data [1];
+
+
 float GetTemp(){
   float t = dht.readTemperature();
   if (isnan(t)){
@@ -139,7 +148,7 @@ void loop() {
   GetInfo();
 
   //ENVIAR INFORMACIÓ
-  if (data == "REANUDAR" || data == "INICIAR"){
+  if (data == "REANUDAR"){
     if (millis() >=NextMillis){
       //Serial.println("estem dins");
       SendObservacions();
@@ -161,8 +170,3 @@ void loop() {
 
 }
   
-
-
-
-
-
