@@ -18,9 +18,11 @@ const int DHTPin = 2;
 
 DHT dht(DHTPin, DHTTYPE);
 //Definició Alarmes
-unsigned long lastDHTMillis = 0;     // Guarda el último momento de lectura válida
+unsigned long lastDHTMillis = 0;//Aixo ha migrat a ultima lectura     // Guarda el último momento de lectura válida
 unsigned long tiempoAlarma = 5000;  
-bool alarmaActiva = false;
+long UltimaLectura[3] = {0*3}; //TEMP HUM DIST en aquest ordre
+int Alarmes[3] = {0*3}; //Temp Hum Dist (en aquest ordre, els valors van de 0 (apagada) i 1(encesa))
+
 
 //Definició Motor pas a pas
 #define OUTPUT1   7                // Connected to the Blue coloured wire
@@ -56,31 +58,31 @@ void setup(){
 
   }
 
-void DHTSendData(){ //funció obsoleta, la seva funcionalitat ha migrat a SendData. A data de (14/11/25)
-  float h = dht.readHumidity();
+float GetTemp(){
   float t = dht.readTemperature();
-
-  if (isnan(h) || isnan(t)) {
-    Serial.println("DHT 11: ERROR (lectura=NaN)");
-    return;
-  } else{
-    Serial.print(h);
-    Serial.print(":");
-    Serial.println(t);
-    mySerial.print(h);
-    mySerial.print(":");
-    mySerial.println(t);
-    lastDHTMillis = millis();   // actualiza el tiempo de la última lectura
-    alarmaActiva = false;       // desactiva la alarma si había saltado
-      }
-  return;
+  if (isnan(t)){
+    return -1;
   }
+  Alarmes[0] = 0;
+  UltimaLectura[0] = millis();
+  return t;
+}
 
-int ping(int TriggerPin, int EchoPin) {
+float GetHum(){
+  float h = dht.readHumidity();
+  if (isnan(h)){
+    return -1;
+  }
+  Alarmes[1] = 0;
+  UltimaLectura[1] = millis();
+  return h;
+}
+
+int GetDist(){
   long duration, distCm;
   
   digitalWrite(TriggerPin, LOW);  //para generar un pulso limpio ponemos a LOW 4us
-  delayMicroseconds(4);
+  delayMicroseconds(4); //Aqui hauriem d'implementar la funció millis ()
   digitalWrite(TriggerPin, HIGH);  //generamos Trigger (disparo) de 10us
   delayMicroseconds(10);
   digitalWrite(TriggerPin, LOW);
@@ -91,37 +93,7 @@ int ping(int TriggerPin, int EchoPin) {
   return distCm;
 }
 
-
-void SendData(int pos){
-  float h = dht.readHumidity();
-  float t = dht.readTemperature();
-
-  if (isnan(h) || isnan(t)) {
-    Serial.println("DHT 11: ERROR (lectura=NaN)");
-    return;
-  } else{
-    //Comunicació DEBUG
-    Serial.print(h);
-    Serial.print(":");
-    Serial.println(t);
-    //TELEMETRIA
-    mySerial.print(h);
-    mySerial.print(":");
-    mySerial.print(t);
-    mySerial.print(":");
-    mySerial.print(pos);
-    mySerial.print(":");
-    mySerial.println(ping(TriggerPin,EchoPin));
-
-    lastDHTMillis = millis();   // actualiza el tiempo de la última lectura
-    alarmaActiva = false;       // desactiva la alarma si había saltado
-      }
-  return;
-  }
-
-
-
-void loop() {
+void MoureMotor(){
   //MOURE MOTOR RADAR
   if (pos <=0){
     Sentit = 1;
@@ -130,42 +102,63 @@ void loop() {
   }
   myStepper.step(Sentit * llargadaSteps);
   pos = pos + (Sentit*llargadaSteps);
+  return;
+  }
 
-  if (millis() >=NextMillisRad){
-    int dist = ping(TriggerPin,EchoPin);
-  NextMillisRad = millis()+interval;
 
-  //REBUDA INFORMACIÓ
+void SendObservacions(){ 
+    //Comunicació DEBUG
+    Serial.print(GetHum());
+    Serial.print(":");
+    Serial.println(GetTemp());
+    //TELEMETRIA
+    mySerial.print(GetHum());
+    mySerial.print(":");
+    mySerial.print(GetTemp());
+    mySerial.print(":");
+    mySerial.print(pos);
+    mySerial.print(":");
+    mySerial.println(GetDist());
+
+    
+  return;
+  }
+
+void GetInfo (){
   if (mySerial.available()) {
     data = mySerial.readString();
     data.trim(); //elimina tots els caràcters que no siguin lletres. Essencial per poder fer els if's seguents
     Serial.print(data);
-    }
-  Serial.println(data);
+  }
+  }
+//
+//
+void loop() {
+  
+  MoureMotor();
+  GetInfo();
+
   //ENVIAR INFORMACIÓ
   if (data == "REANUDAR" || data == "INICIAR"){
-    //Serial.println("HE entrat");
-    //Serial.println(millis());
-    //Serial.println(NextMillis);
-    
     if (millis() >=NextMillis){
       //Serial.println("estem dins");
-      SendData(pos);
+      SendObservacions();
       NextMillis = millis()+interval;
       }
     } else if (data == "STOP"){
       Serial.println("Parant");
-    } //else{
-    //  Serial.println("Sense_Dades");
-    //}
-
-    //CONTROL D'ALARMES
-    if ((millis() - lastDHTMillis) > tiempoAlarma && !alarmaActiva) {
-      Serial.println("FALLO");
-      mySerial.println("FALLO");
-      alarmaActiva = true;  
     }
-  }
+
+
+    //CONTROL D'ALARMES 
+    for (int i=0; i<2;i++){
+      if (Alarmes[i] == 0 && millis()-UltimaLectura[i] > tiempoAlarma){
+        Alarmes[i] = 1;
+        Serial.println("FALLO");
+        mySerial.println("FALLO");
+      }
+    }
+
 }
   
 
