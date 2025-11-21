@@ -2,7 +2,9 @@
 Grup format per Èlia i Llorenç
 
 # Informació general
+Carpeta drive general -> https://drive.google.com/drive/folders/1hFdYLKDdTL-kQPWVFNueYWwphaPcYzBX?usp=sharing
 Organigrama de la 2ª entrega -> https://docs.google.com/spreadsheets/d/1V03nwSN4Qgww2q2C-urp8QdjpU71eczaaE-8ALJhC-Y/edit?usp=sharing
+
 # Entregues
 ## 2ª Entrega
 
