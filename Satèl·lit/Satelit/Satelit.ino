@@ -8,7 +8,7 @@ SoftwareSerial mySerial(10, 11); // RX, TX (azul, naranja)
 String data;
 String periode;
 
-int PeriodeEmisioDelsSistemes[3] = {500*3} //Temp Hum Dist, En aquest ordre
+int PeriodeEmisioDelsSistemes[3] = {500*3}; //Temp Hum Dist, En aquest ordre
 unsigned long NextMillis[3]; //Temp Hum Dist, En aquest ordre
 
 #define DHTTYPE DHT11   // DHT 11
@@ -24,8 +24,11 @@ long UltimaLectura[3] = {0*3}; //TEMP HUM DIST en aquest ordre
 int Alarmes[3] = {0*3}; //Temp Hum Dist (en aquest ordre, els valors van de 0 (apagada) i 1(encesa))
 
 int EstatFuncionamentSistemes[5] = {1*5}; // Temp Hum Dist Alarmes Escombreig || LLista que ens perrmet controlar quins sistemes estàn encesos o no (per default estan engegats fins que rebin el comando contrari) 1 = ENGEGAT
-int PeriodeEmisioDelsSistemes[3] = {500*3} //Temp Hum Dist, En aquest ordre
+int PeriodeEmisioDelsSistemes[3] = {500*3}; //Temp Hum Dist, En aquest ordre
 unsigned long NextMillis[3]; //Temp Hum Dist, En aquest ordre
+int NumeroValorsMitjanes[3]; //Temp Hum Dist, En aquest ordre
+
+//Nota: Seria bo plantejar-se fer una estrucutura per administrar millor tota aquesta quantitat de llistes
 
 int ElementsUlitmMissatge[4]; //Acció Arguments (Id_Sys / Info) Valor || Llista d'elements que pot tenir l'ulitm missatge, CONSULTAR EXCEL PROTOCOL BITS en cas de dubte
 
@@ -199,20 +202,23 @@ void GetInfo (){
     }
     //Crida de funcions relacionades amb la rebuda de dades
     //ORDRES
-    if (ElementsUlitmMissatge[0] == 2){ //Acció ->ORDRE
+    if (ElementsUlitmMissatge[0] == "2"){ //Acció ->ORDRE
       if (ElementsUlitmMissatge[1] == 0){ //Argument -> Stop
         EstatFuncionamentSistemes[ElementsUlitmMissatge[2]] = 0;
 
-      } else if (ElementsUlitmMissatge[1] == 2){ //Argument -> Seguir
+      } else if (ElementsUlitmMissatge[1] == "2"){ //Argument -> Seguir
         EstatFuncionamentSistemes[ElementsUlitmMissatge[2]] = 1;
 
-      } else if (ElementsUlitmMissatge[1] == 3){ //Argument -> Canvi de freq
+      } else if (ElementsUlitmMissatge[1] == "3"){ //Argument -> Canvi de freq
         PeriodeEmisioDelsSistemes[ElementsUlitmMissatge[2]] = ElementsUlitmMissatge[3];
       }
     }
     //RADAR
-    //PERIODE DE MITJANES
-
+    
+    //MITJANES
+    if (ElementsUlitmMissatge[0] == "4"){
+      NumeroValorsMitjanes[ElementsUlitmMissatge[1]] = ElementsUlitmMissatge[2];
+    }
     Serial.print(data);
 
   }
@@ -224,19 +230,7 @@ void loop() {
   MoureMotor();
   GetInfo();
   SendObservacions();
-  
-/*
-  //ENVIAR INFORMACIÓ
-  if (data == "REANUDAR"){
-    if (millis() >=NextMillis){
-      //Serial.println("estem dins");
-      SendObservacions();
-      NextMillis = millis()+interval;
-      }
-    } else if (data == "STOP"){
-      Serial.println("Parant");
-    }
-*/
+
 
     //CONTROL D'ALARMES
     if (EstatFuncionamentSistemes[3]==1){ 
