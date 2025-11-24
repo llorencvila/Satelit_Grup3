@@ -1,4 +1,5 @@
 from tkinter import *
+from tkinter import messagebox
 import matplotlib.pyplot as plt
 import numpy as np
 import serial
@@ -31,7 +32,8 @@ histDist = []
 contact = []
 parametres = 4
 
-data_lock = threading.Lock()
+data_lock = threading.Lock() #https://labex.io/es/tutorials/python-how-to-use-lock-in-python-s-threading-module-417460
+                             #La funció lock serveix per evitar que hi hagi conflictes en la escriptura de variables entre els codis de dins i fora del thread
 
 
 # ───────────────────────────────────────────────
@@ -54,8 +56,10 @@ def resumeHT():
         mySerial.write(mensaje.encode('utf-8'))
     print("REANUDAR")
 
-def error():
-    print("FALLO EN LA TRANSMISSIÓ DE DADES")
+def alarma(sistema):
+    noms_alarmes = ["Temperatura", "Humitat", "Distancia", "Perduda Conexió"]
+    messagebox.showwarning("showwarning", "Warning") 
+
 
 def canvi_periodeHT():
     periode_transmisio = "periode" +fraseHTEntry.get()
@@ -86,6 +90,8 @@ def canvi_periode_dist():
     periode_transmisio = "periode" +frase_distEntry.get()
     mySerial.write(periode_transmisio)
     print ('Has canviat el periode de transimsio a --- ' + frase_distEntry.get())
+
+
     
 
 
@@ -213,25 +219,30 @@ def recepcion():
         if Debug_RecepcioSimulada == False :
             if mySerial and mySerial.in_waiting > 0:
                 linea = mySerial.readline().decode('utf-8').rstrip()
-                data = linea.split(':') #Type list // data[x] = Type: str
+                data_chunks = linea.split(';') #Type list // data[x] = Type: str
+                accio = data_chunks[0]
+                data = data_chunks[1].split(":")
+                #OBSERVACIONS
+                if accio == 0: 
+                    if len(data) == parametres: #Comprovació que rebem totes les dades
+                        contact.append(int(temps()))
+                        print("Humitat:", data[0])
+                        print("Temp:   ", data[1]) 
+                        print("Pos:", (int (data[2])/4779)*360)
+                        print("Dist:   ", data[3]) 
+                        #print(temps())
+                        histH.append(float(data[0]))
+                        histT.append(float(data[1]))
+                        histAng.append(float(data[2]))
+                        histDist.append(float(data[3]))
 
-                if len(data) == parametres: #Comprovació que rebem totes les dades
-                    contact.append(int(temps()))
-                    print("Humitat:", data[0])
-                    print("Temp:   ", data[1]) 
-                    print("Pos:", (int (data[2])/4779)*360)
-                    print("Dist:   ", data[3]) 
-                    #print(temps())
-                    histH.append(float(data[0]))
-                    histT.append(float(data[1]))
-                    histAng.append(float(data[2]))
-                    histDist.append(float(data[3]))
-                    print (histH)
-                elif data == "FALLO":
-                    error()
+                        print (histH)
+                #ALARMES
+                elif accio == 1:
+                    alarma()
                     print("Error a la recepció de dades")
         else: 
-            with data_lock:
+            with data_lock: #No acabo d'entendre perque fem servir el thread.lock() si la variable que accedim no es compartida ni s'edita enlloc més
                 histH.append(float("%.2f" % random.uniform(0,100)))
                 histT.append(float("%.2f" % random.uniform(10,25)))
                 histAng.append(float("%.2f" % random.uniform(0,180)))

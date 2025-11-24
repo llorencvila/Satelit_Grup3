@@ -5,12 +5,11 @@
 
 
 SoftwareSerial mySerial(10, 11); // RX, TX (azul, naranja)
-int interval = 500;
-int intervalRad = 500;
 String data;
-unsigned long NextMillis;
-unsigned long NextMillisRad;
+String periode;
 
+int PeriodeEmisioDelsSistemes[3] = {500*3} //Temp Hum Dist, En aquest ordre
+unsigned long NextMillis[3]; //Temp Hum Dist, En aquest ordre
 
 #define DHTTYPE DHT11   // DHT 11
 const int DHTPin = 2;   
@@ -20,9 +19,15 @@ DHT dht(DHTPin, DHTTYPE);
 //Definició Alarmes
 unsigned long lastDHTMillis = 0;//Aixo ha migrat a ultima lectura     // Guarda el último momento de lectura válida
 unsigned long tiempoAlarma = 5000;  
+
 long UltimaLectura[3] = {0*3}; //TEMP HUM DIST en aquest ordre
 int Alarmes[3] = {0*3}; //Temp Hum Dist (en aquest ordre, els valors van de 0 (apagada) i 1(encesa))
 
+int EstatFuncionamentSistemes[5] = {1*5}; // Temp Hum Dist Alarmes Escombreig || LLista que ens perrmet controlar quins sistemes estàn encesos o no (per default estan engegats fins que rebin el comando contrari) 1 = ENGEGAT
+int PeriodeEmisioDelsSistemes[3] = {500*3} //Temp Hum Dist, En aquest ordre
+unsigned long NextMillis[3]; //Temp Hum Dist, En aquest ordre
+
+int ElementsUlitmMissatge[4]; //Acció Arguments (Id_Sys / Info) Valor || Llista d'elements que pot tenir l'ulitm missatge, CONSULTAR EXCEL PROTOCOL BITS en cas de dubte
 
 //Definició Motor pas a pas
 #define OUTPUT1   7                // Connected to the Blue coloured wire
@@ -51,76 +56,104 @@ void setup(){
   pinMode(TriggerPin, OUTPUT);
   pinMode(EchoPin, INPUT);
 
-  NextMillis = millis()+interval;
   dht.begin();
 
-  NextMillisRad = millis()+intervalRad;
-
+  for (int i ; i<len(NextMillis); i++){
+    NextMillis[i] = millis()+PeriodeEmisioDelsSistemes[i];
   }
 
+  }
+/*
 void GetPeriode (){ 
   if (mySerial.available()) {
-    periodeHT = linmySerial.readStringea.split(',');
+    periode = linmySerial.readStringea.split(',');
       if (data[0] == 22)
-        int interval = data [1];
+        int interval = perdiode [1];
       if (data[0] == 23)
-        int intervalRad = data [1];
-
+        int intervalRad = periode [1];
+*/
 
 float GetTemp(){
-  float t = dht.readTemperature();
-  if (isnan(t)){
-    return -1;
+  if (millis() >=NextMillis[0] && EstatFuncionamentSistemes[0] == 1){
+    float t = dht.readTemperature();
+
+    if (isnan(t)){
+      return -1;
+
+    } else {
+      Alarmes[0] = 0;
+      UltimaLectura[0] = millis();
+      return t;
+      }
+
+  }else{
+    return 0;
   }
-  Alarmes[0] = 0;
-  UltimaLectura[0] = millis();
-  return t;
-}
 
 float GetHum(){
-  float h = dht.readHumidity();
-  if (isnan(h)){
-    return -1;
+  if (millis() >=NextMillis[1] && EstatFuncionamentSistemes[1] == 1){
+    float h = dht.readHumidity();
+
+    if (isnan(h)){
+      return -1;
+
+    }else{
+      Alarmes[1] = 0;
+      UltimaLectura[1] = millis();
+      return h;
+      }
+
+    }else{
+      return 0;
+    }
   }
-  Alarmes[1] = 0;
-  UltimaLectura[1] = millis();
-  return h;
-}
 
 int GetDist(){
-  long duration, distCm;
-  
-  digitalWrite(TriggerPin, LOW);  //para generar un pulso limpio ponemos a LOW 4us
-  delayMicroseconds(4); //Aqui hauriem d'implementar la funció millis ()
-  digitalWrite(TriggerPin, HIGH);  //generamos Trigger (disparo) de 10us
-  delayMicroseconds(10);
-  digitalWrite(TriggerPin, LOW);
-  
-  duration = pulseIn(EchoPin, HIGH);  //medimos el tiempo entre pulsos, en microsegundos
-  
-  distCm = duration * 10 / 292/ 2;   //convertimos a distancia, en cm
-  return distCm;
-}
+  if (millis() >=NextMillis[2]  && EstatFuncionamentSistemes[2] == 1){
+    long duration, distCm;
+    
+    digitalWrite(TriggerPin, LOW);  //para generar un pulso limpio ponemos a LOW 4us
+    delayMicroseconds(4); //Aqui hauriem d'implementar la funció millis ()
+    digitalWrite(TriggerPin, HIGH);  //generamos Trigger (disparo) de 10us
+    delayMicroseconds(10);
+    digitalWrite(TriggerPin, LOW);
+    
+    duration = pulseIn(EchoPin, HIGH);  //medimos el tiempo entre pulsos, en microsegundos
+    
+    distCm = duration * 10 / 292/ 2;   //convertimos a distancia, en cm
+    return distCm;
+
+    }else{
+      return 0;
+    }
+  }
 
 void MoureMotor(){
   //MOURE MOTOR RADAR
-  if (pos <=0){
-    Sentit = 1;
-  }else if (pos >= 4779) {
-    Sentit = -1;
-  }
-  myStepper.step(Sentit * llargadaSteps);
-  pos = pos + (Sentit*llargadaSteps);
-  return;
+  if (EstatFuncionamentSistemes[4] == 1){
+    if (pos <=0){
+      Sentit = 1;
+    }else if (pos >= 4779) {
+      Sentit = -1;
+    }
+    myStepper.step(Sentit * llargadaSteps);
+    pos = pos + (Sentit*llargadaSteps);
+    return;
+    }
   }
 
 
 void SendObservacions(){ 
+    float h = GetHum();
+    float t = GetTemp();
+    int dist = GetDist();
     //Comunicació DEBUG
     Serial.print(GetHum());
     Serial.print(":");
     Serial.println(GetTemp());
     //TELEMETRIA
+    mySerial.print(0);
+    mySerial.print(";");
     mySerial.print(GetHum());
     mySerial.print(":");
     mySerial.print(GetTemp());
@@ -128,16 +161,60 @@ void SendObservacions(){
     mySerial.print(pos);
     mySerial.print(":");
     mySerial.println(GetDist());
+    //CHECHSUM
+    //nt chechsum = (int(";")+GetHum)
 
     
   return;
+  }
+
+void SendAlarm (int argument){
+  //llista d'arguments
+  //0 = TEMP    |    1 = HUMITAT    |    2 = DISTÀNCIA    | 
+    if (argument == 0 ||argument == 1 || argument == 2){ //comprovem que l'argument estigui dins del rang 
+      mySerial.print(1); //Codi identificatiu Alarmes
+      mySerial.print(";");//Separador de arguments
+      mySerial.println(argument);
+      }
   }
 
 void GetInfo (){
   if (mySerial.available()) {
     data = mySerial.readString();
     data.trim(); //elimina tots els caràcters que no siguin lletres. Essencial per poder fer els if's seguents
+    
+    //PARSING
+    int i = 0; //Acció Arguments (Id_Sys / Info) Valor
+    int UltimIndexSeparador = 0;
+    int IndexSeparador;
+
+    while (i<4 || IndexSeparador != -1){
+      IndexSeparador = data.indexOf(";");
+
+      if (IndexSeparador != -1){
+        ElementsUlitmMissatge[i] = data.substring(UltimIndexSeparador, IndexSeparador)  
+        UltimIndexSeparador = IndexSeparador+1;
+      i++
+      }
+    }
+    //Crida de funcions relacionades amb la rebuda de dades
+    //ORDRES
+    if (ElementsUlitmMissatge[0] == 2){ //Acció ->ORDRE
+      if (ElementsUlitmMissatge[1] == 0){ //Argument -> Stop
+        EstatFuncionamentSistemes[ElementsUlitmMissatge[2]] = 0;
+
+      } else if (ElementsUlitmMissatge[1] == 2){ //Argument -> Seguir
+        EstatFuncionamentSistemes[ElementsUlitmMissatge[2]] = 1;
+
+      } else if (ElementsUlitmMissatge[1] == 3){ //Argument -> Canvi de freq
+        PeriodeEmisioDelsSistemes[ElementsUlitmMissatge[2]] = ElementsUlitmMissatge[3];
+      }
+    }
+    //RADAR
+    //PERIODE DE MITJANES
+
     Serial.print(data);
+
   }
   }
 //
@@ -146,7 +223,9 @@ void loop() {
   
   MoureMotor();
   GetInfo();
-
+  SendObservacions();
+  
+/*
   //ENVIAR INFORMACIÓ
   if (data == "REANUDAR"){
     if (millis() >=NextMillis){
@@ -157,14 +236,16 @@ void loop() {
     } else if (data == "STOP"){
       Serial.println("Parant");
     }
+*/
 
-
-    //CONTROL D'ALARMES 
-    for (int i=0; i<2;i++){
-      if (Alarmes[i] == 0 && millis()-UltimaLectura[i] > tiempoAlarma){
-        Alarmes[i] = 1;
-        Serial.println("FALLO");
-        mySerial.println("FALLO");
+    //CONTROL D'ALARMES
+    if (EstatFuncionamentSistemes[3]==1){ 
+      for (int i=0; i<2;i++){
+        if (Alarmes[i] == 0 && millis()-UltimaLectura[i] > tiempoAlarma){
+          Alarmes[i] = 1;
+          SendAlarm(i);
+          Serial.println("FALLO");
+        }
       }
     }
 

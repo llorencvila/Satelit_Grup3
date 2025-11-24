@@ -8,9 +8,10 @@ void setup() {
    i=1;
 }
 void loop() {
-   delay (1000);
-   mySerial.print("Envío: ");
+   delay (5000);
+   mySerial.print("Envio: ");
    mySerial.println(i);
+   Serial.print("Envio: ");
    Serial.println(i);
    i=i+1;
 }
