@@ -6,6 +6,67 @@ Carpeta drive general -> [Link Carpeta Drive](https://drive.google.com/drive/fol
 
 Organigrama -> [Link Organigrama](https://docs.google.com/spreadsheets/d/1V03nwSN4Qgww2q2C-urp8QdjpU71eczaaE-8ALJhC-Y/edit?usp=sharing)
 
+## Protocol unitari
+El protocol unitari està estructurat per elements separats per "**;**", és a dir, funciona d'una forma similar a els "comandos" d'una terminal. Tanmateix, les tots els avalors estan pensats pequè puguin cabre en 3bits (numero màxim de opcions diferents) 
+
+L'estructura del missatge enviat té aquesta forma:
+| ACCIÓ |;|  ARGUMENT  |;|   VALOR1   |;|   VALOR2   |
+| ------ |-| ------ |-| ------ |-| ------ |
+
+Adicionalment, per adreçar-se als diferents sistemes es fa servir el conjunt d'**identificadors absoluts de sistemes** (**Id_Sys**). I aquest conjunt té la seguent forma:
+| Sistema | Valor |
+| ------- | ----- |
+| Temperatura | 000 |
+| Humitat     | 001 |
+| Radar       | 010 |
+| Alarmes     | 011 |
+| Escombreig  | 100 |
+| All         | 101 |
+
+
+> [!TIP]
+> La informació de la llista seguent està organitzada de la seguent forma:
+>   - Acció
+>       - Argument
+>           - Valors 1 i 2 si escau
+
+- **Observacions (000)**
+  
+  Recull totes les observacions fetes per el satèl·lit i les envia en un una sola línea separada per " : " on la posició indica de quin sistema prové la informació.
+
+  Exemple:
+  | temperatura |:|  humitat  |:|   Distància   |:|   Angle Radar   |
+  | ------ |-| ------ |-| ------ |-| ------ |
+  
+
+  
+- **Alarmes (001)**
+    - Temp (000)
+    - Hum (001)
+    - Dist (010)
+    - PerdudaConexió (011)
+      
+- **Ordres (010)**
+  - Stop (000)
+      - Id_Sys
+  - Start (001)
+      - Id_Sys
+  - Freq (010)
+      - Id_sys
+  
+- **Radar (011)**
+    - Vel (000)
+    - Lock (001)
+        - Valor1 = Posició
+        - Valor2 = Angle de Búsqueda
+    - Mov (010)
+    
+- **Mitjanes (100)**
+    - Id_Sys
+      - Valor1 = Nº de Valors a pendre per la mitjana
+  
+
+
 # Entregues
 
 ## 3ª Entrega
