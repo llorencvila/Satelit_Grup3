@@ -8,8 +8,6 @@ SoftwareSerial mySerial(10, 11); // RX, TX (azul, naranja)
 String data;
 String periode;
 
-int PeriodeEmisioDelsSistemes[3] = {500*3}; //Temp Hum Dist, En aquest ordre
-unsigned long NextMillis[3]; //Temp Hum Dist, En aquest ordre
 
 #define DHTTYPE DHT11   // DHT 11
 const int DHTPin = 2;   
@@ -61,7 +59,7 @@ void setup(){
 
   dht.begin();
 
-  for (int i ; i<len(NextMillis); i++){
+  for (int i ; i<3; i++){ //recorre tots els elements de l'array nextmillis
     NextMillis[i] = millis()+PeriodeEmisioDelsSistemes[i];
   }
 
@@ -91,6 +89,7 @@ float GetTemp(){
 
   }else{
     return 0;
+    }
   }
 
 float GetHum(){
@@ -195,9 +194,9 @@ void GetInfo (){
       IndexSeparador = data.indexOf(";");
 
       if (IndexSeparador != -1){
-        ElementsUlitmMissatge[i] = data.substring(UltimIndexSeparador, IndexSeparador)  
+        ElementsUlitmMissatge[i] = data.substring(UltimIndexSeparador, IndexSeparador).toInt();
         UltimIndexSeparador = IndexSeparador+1;
-      i++
+      i++;
       }
     }
     //Crida de funcions relacionades amb la rebuda de dades
@@ -214,14 +213,27 @@ void GetInfo (){
       }
     }
     //RADAR
-    
+    if (ElementsUlitmMissatge[0] == "3"){
+
+      if (ElementsUlitmMissatge[1] == "0"){
+        llargadaSteps == ElementsUlitmMissatge[2];
+        //Realment canviem la llargada del cada desplaçament, és així pq la velocitat real del motor ja és la maxima de per si per tal de que no es cali
+        
+      }else if (ElementsUlitmMissatge[1] == "1"){
+        //CODI LOCK
+      } else if (ElementsUlitmMissatge[1] == "2"){
+        pos = ElementsUlitmMissatge[2];
+
+      }
+
+      }
+    }
     //MITJANES
     if (ElementsUlitmMissatge[0] == "4"){
       NumeroValorsMitjanes[ElementsUlitmMissatge[1]] = ElementsUlitmMissatge[2];
     }
     Serial.print(data);
 
-  }
   }
 //
 //

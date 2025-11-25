@@ -31,6 +31,13 @@ histAng = []
 histDist = []
 contact = []
 parametres = 4
+Llista_Arguments_Ordres = ["stop", "seguir", "freq"]
+llista_Arguments_Radar = ["vel", "lock", "moure", "escombreig"]
+llista_Id_sys = ["temp", "hum", "radar", "alarmes", "escombreig", "all"]
+noms_alarmes = ["Temperatura", "Humitat", "Distancia", "Perduda Conexió"]
+
+
+
 
 data_lock = threading.Lock() #https://labex.io/es/tutorials/python-how-to-use-lock-in-python-s-threading-module-417460
                              #La funció lock serveix per evitar que hi hagi conflictes en la escriptura de variables entre els codis de dins i fora del thread
@@ -43,58 +50,133 @@ print ("Funcionant")
 def temps():
     return time.time() - t0
 
-def stopHT():
+def stopHT(): #Aquesta funció ha migrat a Send_Ordres
     if Debug_RecepcioSimulada == False:
         mensaje = "STOP"
         mySerial.write(mensaje.encode('utf-8'))
     print("STOP")
     #mySerial.close
 
-def resumeHT():
+def resumeHT(): #Aquesta funció ha migrat a Send_Ordres
     if Debug_RecepcioSimulada == False:
         mensaje = "REANUDAR"
         mySerial.write(mensaje.encode('utf-8'))
     print("REANUDAR")
 
-def alarma(sistema):
-    noms_alarmes = ["Temperatura", "Humitat", "Distancia", "Perduda Conexió"]
-    messagebox.showwarning("showwarning", "Warning") 
+def Notificació_Alarma(arguments):
+    messagebox.showwarning("Alarma", noms_alarmes(arguments)) 
 
-
-def canvi_periodeHT():
+def canvi_periodeHT(): ##Aquesta funció ha migrat a Send_Canvi_Frequencia
     periode_transmisio = "periode" +fraseHTEntry.get()
     mySerial.write(periode_transmisio)
     print ('Has canviat el periode de transimsio a --- ' + fraseHTEntry.get())
+
+def Send_Ordres(Argument, info): 
+    #Estrucutra del missatge 
+    #  2;    Codi de Argument        ;  Codi_Informacio
+    #Acció   Odrdre (Start/stop)     Id_sys (temp, hum...)
+    if Debug_RecepcioSimulada == False:
+        for i in len(Llista_Arguments_Ordres):  #Aquest pas no es extremadament nescesari, només està aqui pq sigui més facil de fer servir la funció per la persona que programa
+            if Llista_Arguments_Ordres[i] == Argument:
+                Codi_Argument = i
+
+        if Codi_Argument == 0 or Codi_Argument == 1: # Si el argument == a Stop o Seguir
+            for i in len(llista_Id_sys):
+                if llista_Id_sys[i] == info:
+                    Info_Missatge = i
+        
+        missatgefinal = ("2;"+str(Codi_Argument)+";"+str(Info_Missatge))
+        mySerial.write(missatgefinal.encode('utf-8'))
+
+def Send_Canvi_Frequencia(Id_Sys, ValorFreq):
+    #Estrucutra del missatge 
+    #  2;      2;    Id_sys;              Valor freq
+    #Acció   Freq    Id_sys (temp, hum...)
+    if Debug_RecepcioSimulada:
+        for i in len(llista_Id_sys):
+            if llista_Id_sys[i] == Id_Sys:
+                Missatge_Id_Sys = i
+        
+        missatgefinal = ("2;2;"+str(Missatge_Id_Sys)+";"+str(abs(ValorFreq)))
+        mySerial.write(missatgefinal.encode('utf-8'))
+
+def Send_Radar(Argument, Valor1, Valor2):
+    #                            Estrucutras del missatge 
+    #  3;    Codi d'argument                           ;       Valor1        ;    Valor2  
+    #Acció   Argument (vel/lock/Moure/escombreig)     Valor de velocitat        Angle
+    #                                                    o de posició      (Només s'usa en el cas de lock)
+    #                                                (depen de la acció)
+    if Debug_RecepcioSimulada == False:
+        trobat = 0
+        i = 0
+        while trobat == 0 and i < len(llista_Arguments_Radar):
+            if llista_Arguments_Radar[i] == Argument:
+                Codi_Argument = Argument
+        
+        if Codi_Argument == 0 or Codi_Argument == 2: #Canvi velocitat o bé moure a x lloc
+            Valor1_Missatge = Valor1
+            missatgefinal = ("3;"+str(Codi_Argument)+";"+str(Valor1_Missatge))
+
+        if Codi_Argument == 1: # El cas de lock que nescesita dos valors 
+            Valor2_Missatge = Valor2
+
+            missatgefinal = ("3;"+str(Codi_Argument)+";"+str(Valor1_Missatge)+";"+str(Valor2_Missatge))
+
+        if Codi_Argument == 3: #En cas que sigui escombreig
+            missatgefinal = ("3;"+str(Codi_Argument))
+
+        mySerial.write(missatgefinal.encode('utf-8'))
+        
+def Send_Mitjanes_Arduino(Argument, Valor1): #Aquesta funció serveix nomès pq les mitjanes les faci l'arduino. No serveix perque les mitjanes siguin fetes a la Ground Station
+    #                            Estrucutra del missatge 
+    #  4;    Codi d'argument                           ;       Valor1         
+    #Acció   Id_sys     Valor de velocitat                Nº de valors que ha 
+    #                                                     de tenir la mitjana     
+    if Debug_RecepcioSimulada == False: 
+        trobat = 0
+        i = 0
+        
+        while trobat == 0 and i < len(llista_Id_sys):
+            if llista_Id_sys[i] == Argument:
+                Codi_Argument = Argument
+
+        if Codi_Argument != 3 or Codi_Argument != 4: #Sempre que l'argument no sigui ni alarmes ni radar
+            Valor_Missatge = abs(Valor1)
+        else:
+            return -1 #Error, els elements Alarmes i Escombreig no accepten mitjana
+        
+        missatgefinal = ("4;"+str(Codi_Argument)+";"+str(Valor_Missatge))
+        mySerial.write(missatgefinal.encode('utf-8'))
+
+
 
 # ───────────────────────────────────────────────
 # FUNCIONS AUXILIARS DISTANCIA
 # ───────────────────────────────────────────────
 
-def stop_dist():
+def stop_dist(): #Aquesta funció ha migrat a Send_Ordres
     if Debug_RecepcioSimulada == False:
         mensaje = "STOP"
         mySerial.write(mensaje.encode('utf-8'))
     print("STOP")
     #mySerial.close
 
-def resume_dist():
+def resume_dist(): #Aquesta funció ha migrat a Send_Ordres
     if Debug_RecepcioSimulada == False:
         mensaje = "REANUDAR"
         mySerial.write(mensaje.encode('utf-8'))
     print("REANUDAR")
 
-def error_dist():
+def error_dist(): #Aquesta funció ha migrat a Notificacio_Alarma
     print("FALLO EN LA TRANSMISSIÓ DE DADES")
 
-def canvi_periode_dist():
+def canvi_periode_dist(): ##Aquesta funció ha migrat a Send_Canvi_Frequencia
     periode_transmisio = "periode" +frase_distEntry.get()
     mySerial.write(periode_transmisio)
     print ('Has canviat el periode de transimsio a --- ' + frase_distEntry.get())
 
 
     
-
-
 # ───────────────────────────────────────────────
 # FINESTRA PRINCIPAL TKINTER
 # ───────────────────────────────────────────────
@@ -239,8 +321,8 @@ def recepcion():
                         print (histH)
                 #ALARMES
                 elif accio == 1:
-                    alarma()
-                    print("Error a la recepció de dades")
+                    Notificació_Alarma(data)
+                    
         else: 
             with data_lock: #No acabo d'entendre perque fem servir el thread.lock() si la variable que accedim no es compartida ni s'edita enlloc més
                 histH.append(float("%.2f" % random.uniform(0,100)))
