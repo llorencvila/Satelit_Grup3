@@ -7,11 +7,11 @@ Carpeta drive general -> [Link Carpeta Drive](https://drive.google.com/drive/fol
 Organigrama -> [Link Organigrama](https://docs.google.com/spreadsheets/d/1V03nwSN4Qgww2q2C-urp8QdjpU71eczaaE-8ALJhC-Y/edit?usp=sharing)
 
 ## Protocol unitari
-El protocol unitari està estructurat per elements, és a dir, funciona d'una forma similar a els "comandos" d'una terminal. Tanmateix, les tots els avalors estan pensats pequè puguin cabre en 3bits (numero màxim de opcions diferents )
+El protocol unitari està estructurat per elements separats per "**;**", és a dir, funciona d'una forma similar a els "comandos" d'una terminal. Tanmateix, les tots els avalors estan pensats pequè puguin cabre en 3bits (numero màxim de opcions diferents) 
 
 L'estructura del missatge enviat té aquesta forma:
-| ACCIÓ |  ARGUMENT  |   VALOR1   |   VALOR2   |
-| ------ | ------ | ------ | ------ |
+| ACCIÓ |;|  ARGUMENT  |;|   VALOR1   |;|   VALOR2   |
+| ------ |-| ------ |-| ------ |-| ------ |
 
 Adicionalment, per adreçar-se als diferents sistemes es fa servir el conjunt d'**identificadors absoluts de sistemes** (**Id_Sys**). I aquest conjunt té la seguent forma:
 | Sistema | Valor |
