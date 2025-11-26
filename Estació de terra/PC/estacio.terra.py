@@ -50,6 +50,14 @@ print ("Funcionant")
 def temps():
     return time.time() - t0
 
+def Notificació_Alarma(arguments):
+    messagebox.showwarning("Alarma", noms_alarmes(arguments)) 
+
+
+# ───────────────────────────────────────────────
+# FUNCIONS PER ENVIAR DADES
+# ───────────────────────────────────────────────
+
 def stopHT(): #Aquesta funció ha migrat a Send_Ordres
     if Debug_RecepcioSimulada == False:
         mensaje = "STOP"
@@ -63,13 +71,12 @@ def resumeHT(): #Aquesta funció ha migrat a Send_Ordres
         mySerial.write(mensaje.encode('utf-8'))
     print("REANUDAR")
 
-def Notificació_Alarma(arguments):
-    messagebox.showwarning("Alarma", noms_alarmes(arguments)) 
-
 def canvi_periodeHT(): ##Aquesta funció ha migrat a Send_Canvi_Frequencia
     periode_transmisio = "periode" +fraseHTEntry.get()
     mySerial.write(periode_transmisio)
     print ('Has canviat el periode de transimsio a --- ' + fraseHTEntry.get())
+
+#Realment, les funcions seguents es podrien ajuntar en una de sola, de moment s'ha optat per deixar-ho aixi perque pot resultar més entenedor. En un futur es poden ajuntar.
 
 def Send_Ordres(Argument, info): 
     #Estrucutra del missatge 
@@ -85,7 +92,9 @@ def Send_Ordres(Argument, info):
                 if llista_Id_sys[i] == info:
                     Info_Missatge = i
         
-        missatgefinal = ("2;"+str(Codi_Argument)+";"+str(Info_Missatge))
+        missatgefinal = ("2;"+str(Codi_Argument)+";"+str(Info_Missatge)+";")
+
+        missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal)))
         mySerial.write(missatgefinal.encode('utf-8'))
 
 def Send_Canvi_Frequencia(Id_Sys, ValorFreq):
@@ -97,7 +106,9 @@ def Send_Canvi_Frequencia(Id_Sys, ValorFreq):
             if llista_Id_sys[i] == Id_Sys:
                 Missatge_Id_Sys = i
         
-        missatgefinal = ("2;2;"+str(Missatge_Id_Sys)+";"+str(abs(ValorFreq)))
+        missatgefinal = ("2;2;"+str(Missatge_Id_Sys)+";"+str(abs(ValorFreq))+";")
+        missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal)))
+
         mySerial.write(missatgefinal.encode('utf-8'))
 
 def Send_Radar(Argument, Valor1, Valor2):
@@ -115,16 +126,18 @@ def Send_Radar(Argument, Valor1, Valor2):
         
         if Codi_Argument == 0 or Codi_Argument == 2: #Canvi velocitat o bé moure a x lloc
             Valor1_Missatge = Valor1
-            missatgefinal = ("3;"+str(Codi_Argument)+";"+str(Valor1_Missatge))
+            missatgefinal = ("3;"+str(Codi_Argument)+";"+str(Valor1_Missatge)+";")
 
         if Codi_Argument == 1: # El cas de lock que nescesita dos valors 
             Valor2_Missatge = Valor2
 
-            missatgefinal = ("3;"+str(Codi_Argument)+";"+str(Valor1_Missatge)+";"+str(Valor2_Missatge))
+            missatgefinal = ("3;"+str(Codi_Argument)+";"+str(Valor1_Missatge)+";"+str(Valor2_Missatge)+";")
 
         if Codi_Argument == 3: #En cas que sigui escombreig
-            missatgefinal = ("3;"+str(Codi_Argument))
+            missatgefinal = ("3;"+str(Codi_Argument)+";")
 
+        missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal)))
+        
         mySerial.write(missatgefinal.encode('utf-8'))
         
 def Send_Mitjanes_Arduino(Argument, Valor1): #Aquesta funció serveix nomès pq les mitjanes les faci l'arduino. No serveix perque les mitjanes siguin fetes a la Ground Station
@@ -145,9 +158,17 @@ def Send_Mitjanes_Arduino(Argument, Valor1): #Aquesta funció serveix nomès pq 
         else:
             return -1 #Error, els elements Alarmes i Escombreig no accepten mitjana
         
-        missatgefinal = ("4;"+str(Codi_Argument)+";"+str(Valor_Missatge))
+        missatgefinal = ("4;"+str(Codi_Argument)+";"+str(Valor_Missatge)+";")
+        missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal)))
+        
         mySerial.write(missatgefinal.encode('utf-8'))
 
+def Generar_Checksum(missatge):
+    checksum = 0
+    for i in range(len(missatge)):
+        checksum = checksum + ord(missatge[i]) #La funció ord() retorna el valor ASCII de l'element
+
+    return checksum
 
 
 # ───────────────────────────────────────────────
@@ -174,7 +195,6 @@ def canvi_periode_dist(): ##Aquesta funció ha migrat a Send_Canvi_Frequencia
     periode_transmisio = "periode" +frase_distEntry.get()
     mySerial.write(periode_transmisio)
     print ('Has canviat el periode de transimsio a --- ' + frase_distEntry.get())
-
 
     
 # ───────────────────────────────────────────────
@@ -301,27 +321,36 @@ def recepcion():
         if Debug_RecepcioSimulada == False :
             if mySerial and mySerial.in_waiting > 0:
                 linea = mySerial.readline().decode('utf-8').rstrip()
-                data_chunks = linea.split(';') #Type list // data[x] = Type: str
-                accio = data_chunks[0]
-                data = data_chunks[1].split(":")
-                #OBSERVACIONS
-                if accio == 0: 
-                    if len(data) == parametres: #Comprovació que rebem totes les dades
-                        contact.append(int(temps()))
-                        print("Humitat:", data[0])
-                        print("Temp:   ", data[1]) 
-                        print("Pos:", (int (data[2])/4779)*360)
-                        print("Dist:   ", data[3]) 
-                        #print(temps())
-                        histH.append(float(data[0]))
-                        histT.append(float(data[1]))
-                        histAng.append(float(data[2]))
-                        histDist.append(float(data[3]))
+                #Rebem la línea d'informació
 
-                        print (histH)
+                #Comprovem el checksum
+                Checksum_Missatge = linea.rsplit(";",1)[1] #Adruirim el ultim element de la llista, en aquest cas, el checksum
+                if Generar_Checksum(linea[0]) != Checksum_Missatge:
+                    #Error en el checksum
+                    Notificació_Alarma(3)
+
+                elif True: #iMPORTANT : DE MOMENT ESTÀ AIXI MENTRESTANT QUE EL CHECKSUM NO ESTÀ IMPLEMENTAT DEL TOT, UN COP SIUGI FUNCIONAL S'HA DE TREURE I DEIXAR NOMES EL ELSE
+                    data_chunks = linea.split(';') #Type list // data[x] = Type: str
+                    accio = data_chunks[0]
+                    data = data_chunks[1].split(":")
+                    #OBSERVACIONS
+                    if accio == 0: 
+                        if len(data) == parametres: #Comprovació que rebem totes les dades
+                            contact.append(int(temps()))
+                            print("Humitat:", data[0])
+                            print("Temp:   ", data[1]) 
+                            print("Pos:", (int (data[2])/4779)*360)
+                            print("Dist:   ", data[3]) 
+                            #print(temps())
+                            histH.append(float(data[0]))
+                            histT.append(float(data[1]))
+                            histAng.append(float(data[2]))
+                            histDist.append(float(data[3]))
+
+                            print (histH)
                 #ALARMES
-                elif accio == 1:
-                    Notificació_Alarma(data)
+                    elif accio == 1:
+                        Notificació_Alarma(data)
                     
         else: 
             with data_lock: #No acabo d'entendre perque fem servir el thread.lock() si la variable que accedim no es compartida ni s'edita enlloc més
