@@ -1,4 +1,4 @@
-//AQUESTA VERSIÓ TÉ EL CÀLCUL DE LA MITJANA DE TEMPERATURA I HUMITAT, ELS BOTONS CORRESPONENTS A LA INTERFAÇ, AIXÍ COM LES ALERTES DE TEMPERATURA I HUMITAT MÀXIMES
+//AQUEST CODI CONTÉ EL CÀLCUL I L'ENVIAMENT DE LA TEMPERATURA I HUMITAT MITJANES, TAMBÉ CONTÉ EL CODI REFERENT AL CANVI DE PERIODE D'ENVIAMENT DE DADES
 from tkinter import *
 from tkinter import messagebox
 import matplotlib.pyplot as plt
@@ -36,6 +36,7 @@ Llista_Arguments_Ordres = ["stop", "seguir", "freq"]
 llista_Arguments_Radar = ["vel", "lock", "moure", "escombreig"]
 llista_Id_sys = ["temp", "hum", "radar", "alarmes", "escombreig", "all"]
 noms_alarmes = ["Temperatura", "Humitat", "Distancia", "Perduda Conexió"]
+
 
 
 #variables per l'alarma de la mitjana de temperatura i humitat
@@ -83,8 +84,8 @@ def resumeHT(): #Aquesta funció ha migrat a Send_Ordres
     print("REANUDAR")
 
 def canvi_periodeHT(): ##Aquesta funció ha migrat a Send_Canvi_Frequencia
-    periode_transmisio = "periode" +fraseHTEntry.get()
-    mySerial.write(periode_transmisio)
+    ValorFreq = "periode" +fraseHTEntry.get()
+    #mySerial.write(ValorFreq)
     print ('Has canviat el periode de transimsio a --- ' + fraseHTEntry.get())
 
 def Tmax():
@@ -94,7 +95,6 @@ def Tmax():
         print('La temperatura màxima és:' + fraseHTEntry_Tmax.get())
     except ValueError:
         print("Error: no has introduït un número.")
-
 
 def Hmax():
     global Hmax_val
@@ -169,7 +169,7 @@ def Send_Canvi_Frequencia(Id_Sys, ValorFreq):
             if llista_Id_sys[i] == Id_Sys:
                 Missatge_Id_Sys = i
         
-        missatgefinal = ("2;2;"+str(Missatge_Id_Sys)+";"+str(abs(ValorFreq))+";")
+        missatgefinal = ("2;2;"+str(Missatge_Id_Sys)+";"+str(abs(ValorFreq))+";")   #no hauria de ser "2;3;..."?????????????????????????????????????????
         missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal)))
 
         mySerial.write(missatgefinal.encode('utf-8'))
@@ -209,7 +209,6 @@ def activar_mitjanes_arduino():
     Send_Mitjanes_Arduino("temp", 10)
     Send_Mitjanes_Arduino("hum", 10)
 
-
 def Send_Mitjanes_Arduino(Argument, Valor1): #Aquesta funció serveix nomès pq les mitjanes les faci l'arduino. No serveix perque les mitjanes siguin fetes a la Ground Station
     #                            Estrucutra del missatge 
     #  4;    Codi d'argument                           ;       Valor1         
@@ -233,8 +232,6 @@ def Send_Mitjanes_Arduino(Argument, Valor1): #Aquesta funció serveix nomès pq 
         missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal)))
         
         mySerial.write(missatgefinal.encode('utf-8'))
-
-
 
 def Generar_Checksum(missatge):
     checksum = 0
