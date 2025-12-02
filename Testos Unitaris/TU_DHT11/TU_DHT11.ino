@@ -4,7 +4,7 @@
 
 
 #define DHTTYPE DHT11   // DHT 11
-const int DHTPin = 5;   
+const int DHTPin = 2;   
 
 DHT dht(DHTPin, DHTTYPE);
 void setup(){
@@ -17,7 +17,7 @@ void setup(){
 
 void loop() {
 
-  delay(1000);
+  delay(500);
   float h = dht.readHumidity();
   float t = dht.readTemperature();
 

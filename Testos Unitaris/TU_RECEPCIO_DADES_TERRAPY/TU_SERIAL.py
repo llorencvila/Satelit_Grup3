@@ -2,7 +2,7 @@ import serial
 import matplotlib.pyplot as plt
 import time
 
-device = 'COM7'
+device = 'COM11'
 mySerial = serial.Serial(device, 9600)
 print("funcionant:")
 
