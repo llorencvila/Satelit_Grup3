@@ -16,7 +16,7 @@ Debug_RecepcioSimulada = False #En cas de ser True s'inventarà les dades de rec
 # CONFIGURACIÓ DEL PORT SÈRIE 
 # ───────────────────────────────────────────────
 if Debug_RecepcioSimulada == False:
-    device = 'COM7'
+    device = 'COM5'
     mySerial = serial.Serial(device, 9600)
     print("funcionant:")
 
@@ -173,6 +173,7 @@ def Send_Ordres(Argument, info):
 
         missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal))+"|")
         mySerial.write(missatgefinal.encode('utf-8'))
+        mySerial.write("\n".encode('utf-8'))
 
 def Send_Canvi_Frequencia(Id_Sys, ValorFreq):
     #Estrucutra del missatge 
@@ -207,6 +208,9 @@ def Send_Radar(Argument, Valor1, Valor2):
         while trobat == 0 and i < len(llista_Arguments_Radar):
             if llista_Arguments_Radar[i] == Argument:
                 Codi_Argument = Argument
+            else:
+                i = i+1
+
         
         if Codi_Argument == 0 or Codi_Argument == 2: #Canvi velocitat o bé moure a x lloc
             Valor1_Missatge = Valor1
@@ -223,6 +227,7 @@ def Send_Radar(Argument, Valor1, Valor2):
         missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal))+"|")
         
         mySerial.write(missatgefinal.encode('utf-8'))
+        mySerial.write("\n".encode('utf-8'))
         
 def activar_mitjanes_arduino():
     global stopCalc
@@ -242,18 +247,21 @@ def Send_Mitjanes_Arduino(Argument, Valor1): #Aquesta funció serveix nomès pq 
         
         while trobat == 0 and i < len(llista_Id_sys):
             if llista_Id_sys[i] == Argument:
-                Codi_Argument = Argument
+                Codi_Argument = i
                 trobat=1
+            else:
+                i = i+1
 
         if Codi_Argument != 3 or Codi_Argument != 4: #Sempre que l'argument no sigui ni alarmes ni radar
             Valor_Missatge = abs(Valor1)
         else:
             return -1 #Error, els elements Alarmes i Escombreig no accepten mitjana
         
-        missatgefinal = ("4;"+str(Codi_Argument)+";"+str(Valor_Missatge)+";")
+        missatgefinal = ("4;"+"0;"+str(Codi_Argument)+";"+str(Valor_Missatge)+";")
         missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal))+"|")
-        
+        print("ENVIEM DADES_________________________________")
         mySerial.write(missatgefinal.encode('utf-8'))
+        mySerial.write("\n".encode('utf-8'))
 
 def Generar_Checksum(missatge):
     checksum = 0
@@ -261,6 +269,11 @@ def Generar_Checksum(missatge):
         checksum = checksum + ord(missatge[i]) #La funció ord() retorna el valor ASCII de l'element
 
     return checksum
+
+def MitjanesArduinoTkinterFriendly():
+    print("mitjana arduino")
+    Send_Mitjanes_Arduino("temp",0)
+    Send_Mitjanes_Arduino("hum",0)
 
 
 # ───────────────────────────────────────────────
@@ -328,7 +341,7 @@ IniciarHTButton.grid(row=0, column=0, padx=5, pady=5, sticky=N + S + E + W)
 PararHTButton = Button(button_HT_frame, text="Pausa", bg='#FFB74D', fg="white", font=("Arial", 20), command=stopHT)
 PararHTButton.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
 
-CalculArduinoButton = Button(button_HT_frame, text="Calcula la mitjana al satèl·lit", bg="#FF4D6B", fg="white", font=("Arial", 20), command=[Send_Mitjanes_Arduino ("temp",0),Send_Mitjanes_Arduino("hum",0)])
+CalculArduinoButton = Button(button_HT_frame, text="Calcula la mitjana al satèl·lit", bg="#FF4D6B", fg="white", font=("Arial", 20), command=MitjanesArduinoTkinterFriendly)
 CalculArduinoButton.grid(row=6, column=0, padx=5, pady=5, sticky=N + S + E + W)
 
 CalculEstTerraButton = Button(button_HT_frame, text="Calcula la mitjana a l'estació de terra", bg='#FF4D6B', fg="white", font=("Arial", 20), command=activar_mitjanes_EstTerra)
