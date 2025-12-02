@@ -16,7 +16,7 @@ Debug_RecepcioSimulada = False #En cas de ser True s'inventarà les dades de rec
 # CONFIGURACIÓ DEL PORT SÈRIE 
 # ───────────────────────────────────────────────
 if Debug_RecepcioSimulada == False:
-    device = 'COM5'
+    device = 'COM7'
     mySerial = serial.Serial(device, 9600)
     print("funcionant:")
 
@@ -498,8 +498,6 @@ def recepcion():
                     histT.append(float(data[1]))
                     histAng.append(float(data[2]))
                     histDist.append(float(data[3]))
-
-                    print (histH)
                 #ALARMES
                     #elif accio == 1:
                     #    Notificació_Alarma(data)
