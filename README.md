@@ -6,7 +6,7 @@ Carpeta drive general -> [Link Carpeta Drive](https://drive.google.com/drive/fol
 
 Organigrama -> [Link Organigrama](https://docs.google.com/spreadsheets/d/1V03nwSN4Qgww2q2C-urp8QdjpU71eczaaE-8ALJhC-Y/edit?usp=sharing)
 
-## Protocol unitari
+## Protocol d'aplicació
 El protocol unitari està estructurat per elements separats per "**;**", és a dir, funciona d'una forma similar a els "comandos" d'una terminal. Tanmateix, les tots els avalors estan pensats pequè puguin cabre en 3bits (numero màxim de opcions diferents) 
 
 L'estructura del missatge enviat té aquesta forma:
@@ -71,6 +71,7 @@ Adicionalment, per adreçar-se als diferents sistemes es fa servir el conjunt d'
 # Entregues
 
 ## 3ª Entrega
+![Imatge del muntatge de la versió 3](https://github.com/llorencvila/Satelit_Grup3/blob/main/ImatgeMuntatgeVersi%C3%B33.jpg)
 
 ### Requisits 3ª Entrega:
 - [X] El controlador capta correctamente los datos de humedad, temperatura, distancia y posición del satélite.
