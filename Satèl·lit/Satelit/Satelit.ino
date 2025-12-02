@@ -16,8 +16,8 @@ DHT dht(DHTPin, DHTTYPE);
 unsigned long tiempoAlarma = 5000;
 
 long UltimaLectura[3] = {0, 0, 0};      // Temp, Hum, Dist
-int Alarmes[3] = {0, 0, 0};             // Estat 0/1
-int EstatFuncionamentSistemes[5] = {1, 1, 1, 1, 1}; // Tots encesos inicialment
+int Alarmes[3] = {0, 0, 0};             //Temp Hum Dist (en aquest ordre, els valors van de 0 (apagada) i 1(encesa))
+int EstatFuncionamentSistemes[6] = {1, 1, 1, 1, 1, 0}; // Temp Hum Dist Alarmes Escombreig, MitjanesAlSatèl·lit     ||Tots encesos inicialment
 int PeriodeEmisioDelsSistemes[4] = {500, 500, 500, 1000}; // Temp, Hum, Dist, Enviar dades
 
 unsigned long NextMillis[4] = {0, 0, 0, 0};
@@ -65,6 +65,80 @@ void setup() {
 // ===============================================================
 // SENSORS
 // ===============================================================
+
+
+
+//CÀLCUL DE MITJANA DE TEMPERATURA I HUMITAT..............................................................
+#define BUFFER_SIZE 10
+float tempBuffer[BUFFER_SIZE];
+float humBuffer[BUFFER_SIZE];
+int tempIndex = 0;
+int humIndex = 0;
+bool tempFilled = false;
+bool humFilled = false;
+
+void updateBuffers(float temp, float hum) {
+    tempBuffer[tempIndex] = temp;
+    humBuffer[humIndex] = hum;
+
+    tempIndex = (tempIndex + 1) % BUFFER_SIZE;
+    humIndex = (humIndex + 1) % BUFFER_SIZE;
+
+    if (tempIndex == 0) tempFilled = true;
+    if (humIndex == 0) humFilled = true;
+}
+
+float mitjanaTemp() {
+  if (EstatFuncionamentSistemes[5] == 1){
+    int n = tempFilled ? BUFFER_SIZE : tempIndex;
+    float sum = 0;
+    for (int i=0; i<n; i++) sum += tempBuffer[i];
+    return n > 0 ? sum / n : 0;
+  }else{
+    return 0;
+  }
+}
+
+float mitjanaHum() {
+  if (EstatFuncionamentSistemes[5] == 1){
+    int n = humFilled ? BUFFER_SIZE : humIndex;
+    float sum = 0;
+    for (int i=0; i<n; i++) sum += humBuffer[i];
+    return n > 0 ? sum / n : 0;
+
+  } else{
+    return 0;
+  }
+}
+
+void processCommand(String cmd) { //Funció obsoleta, la seva funcionalitat es troba a Getinfo
+    cmd.trim();
+    if (cmd.startsWith("4;")) {
+        // Format: 4;ID;10; (ID=0 temp, 1 hum)
+        int first = cmd.indexOf(';');
+        int second = cmd.indexOf(';', first+1);
+        int third = cmd.indexOf(';', second+1);
+        int ID = cmd.substring(first+1, second).toInt();
+
+        float valorMitjana = 0;
+
+        if (ID == 0)
+          valorMitjana = mitjanaTemp();
+
+        if (ID == 1) 
+          valorMitjana = mitjanaHum();
+
+        // Enviem al serial
+        /*
+        mySerial.print("MITJANA;");
+        mySerial.print(ID);
+        mySerial.print(";");
+        mySerial.println(valorMitjana);
+        */
+    }
+}
+//............................................................................
+
 
 float GetTemp() {
   if (millis() >= NextMillis[0] && EstatFuncionamentSistemes[0] == 1) {
@@ -152,7 +226,12 @@ void SendObservacions() {
   mySerial.print(pos); 
   mySerial.print(":");
   mySerial.print(dist2);
+  mySerial.print(":");
+  mySerial.print(mitjanaHum());
+  mySerial.print(":");
+  mySerial.print(mitjanaTemp());
   mySerial.print("\n");
+
 }
 
 void SendAlarm(int argument) {
@@ -193,26 +272,33 @@ void GetInfo() {
     ElementsUltimMissatge[idx] = data.substring(start).toInt();
 
   int accio = ElementsUltimMissatge[0];
-  int arg1 = ElementsUltimMissatge[1];
-  int arg2 = ElementsUltimMissatge[2];
-  int arg3 = ElementsUltimMissatge[3];
+  int argument = ElementsUltimMissatge[1];
+  int valor1 = ElementsUltimMissatge[2];
+  int valor2 = ElementsUltimMissatge[3];
 
   // ----- ORDRES -----
   if (accio == 2) {
-    if (arg1 == 0)   EstatFuncionamentSistemes[arg2] = 0;      // STOP
-    if (arg1 == 2)   EstatFuncionamentSistemes[arg2] = 1;      // START
-    if (arg1 == 3)   PeriodeEmisioDelsSistemes[arg2] = arg3;   // Canvi freq
+    if (argument == 0)   EstatFuncionamentSistemes[valor1] = 0;      // STOP
+    if (argument == 2)   EstatFuncionamentSistemes[valor1] = 1;      // START
+    if (argument == 3)   PeriodeEmisioDelsSistemes[valor1] = valor2;   // Canvi freq
   }
 
   // ----- RADAR -----
   if (accio == 3) {
-    if (arg1 == 0) llargadaSteps = arg2;  // Ajust pas motor
-    if (arg1 == 2) pos = arg2;            // Reposicionar
+    if (argument == 0) llargadaSteps = valor1;  // Ajust pas motor
+    if (argument == 2) pos = valor1;            // Reposicionar
   }
 
   // ----- MITJANES -----
   if (accio == 4) {
-    NumeroValorsMitjanes[arg1] = arg2;
+    if (argument == 0){ //Les mitjanes es calculen al satèl·lit
+      EstatFuncionamentSistemes[5] = 1;
+      //NumeroValorsMitjanes[argument] = valor1;        
+    } else if (argument == 1){
+      EstatFuncionamentSistemes[5] = 0;
+    }
+
+
   }
 }
 
@@ -221,7 +307,7 @@ void GetInfo() {
 // ===============================================================
 void loop() {
 
-  //MoureMotor();
+  MoureMotor();
   GetInfo();
   if (millis() >= NextMillis[3]){
     SendObservacions();
