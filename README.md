@@ -94,8 +94,8 @@ Adicionalment, per adreçar-se als diferents sistemes es fa servir el conjunt d'
 - [ ] Se han añadido comentarios clarificadores. En particular, hay comentarios que describen claramente el protocolo de aplicación. Cada función tiene un comentario que describe lo que hace, qué parámetros tiene y qué resultado produce.
 - [ ] Se ha implementado correctamente una cola circular para facilitar el cálculo de la media de los últimos 10 valores de temperatura.
 
-### Video 2a Entrega
-
+### Video 3a Entrega
+ [Video 3a Entrega](https://youtu.be/0R641AyqAaY)
 
 ## 2ª Entrega
 
