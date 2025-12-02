@@ -62,6 +62,7 @@ Adicionalment, per adreçar-se als diferents sistemes es fa servir el conjunt d'
     - Mov (010)
     
 - **Mitjanes (100)**
+  - Lloc on es calculen (Satèl·lit = 000 / PC =001)
     - Id_Sys
       - Valor1 = Nº de Valors a pendre per la mitjana
   
