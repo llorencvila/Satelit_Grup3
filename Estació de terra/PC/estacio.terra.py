@@ -16,7 +16,7 @@ Debug_RecepcioSimulada = False #En cas de ser True s'inventarà les dades de rec
 # CONFIGURACIÓ DEL PORT SÈRIE 
 # ───────────────────────────────────────────────
 if Debug_RecepcioSimulada == False:
-    device = 'COM11'
+    device = 'COM5'
     mySerial = serial.Serial(device, 9600)
     print("funcionant:")
 
@@ -35,6 +35,17 @@ Llista_Arguments_Ordres = ["stop", "seguir", "freq"]
 llista_Arguments_Radar = ["vel", "lock", "moure", "escombreig"]
 llista_Id_sys = ["temp", "hum", "radar", "alarmes", "escombreig", "all"]
 noms_alarmes = ["Temperatura", "Humitat", "Distancia", "Perduda Conexió"]
+
+
+
+#variables per l'alarma de la mitjana de temperatura i humitat
+
+consec_Tmax = 0
+consec_Hmax = 0
+Tmax_val = None
+Hmax_val = None
+
+stopCalc = False
 
 
 
@@ -59,55 +70,121 @@ def Notificació_Alarma(arguments):
 # ───────────────────────────────────────────────
 
 def stopHT(): #Aquesta funció ha migrat a Send_Ordres
-    if Debug_RecepcioSimulada == False:
-        mensaje = "STOP"
-        mySerial.write(mensaje.encode('utf-8'))
+    Send_Ordres("stop","temp")
+    #Send_Ordres("stop", "hum")
     print("STOP")
     #mySerial.close
 
 def resumeHT(): #Aquesta funció ha migrat a Send_Ordres
-    if Debug_RecepcioSimulada == False:
-        mensaje = "REANUDAR"
-        mySerial.write(mensaje.encode('utf-8'))
+    Send_Ordres("seguir","temp")
+    Send_Ordres("seguir", "hum")
     print("REANUDAR")
 
 def canvi_periodeHT(): ##Aquesta funció ha migrat a Send_Canvi_Frequencia
-    periode_transmisio = "periode" +fraseHTEntry.get()
-    mySerial.write(periode_transmisio)
-    print ('Has canviat el periode de transimsio a --- ' + fraseHTEntry.get())
+    Send_Canvi_Frequencia("temp", fraseHTEntry.get())
+    Send_Canvi_Frequencia("hum", fraseHTEntry.get())
 
+def Tmax():
+    global Tmax_val
+    try:
+        Tmax_val = float(fraseHTEntry_Tmax.get())
+        print('La temperatura màxima és:' + fraseHTEntry_Tmax.get())
+    except ValueError:
+        print("Error: no has introduït un número.")
+
+def Hmax():
+    global Hmax_val
+    try:
+        Hmax_val = float(fraseHTEntry_Hmax.get())
+        print('La humitat màxima és:' + fraseHTEntry_Hmax.get())
+    except ValueError:
+        print("Error: no has introduït un número.")
+
+def activar_mitjanes_EstTerra():
+    global stopCalc
+    stopCalc = False
+    mitjanes_EstTerra()
+
+
+def mitjanes_EstTerra(): #NOMÉS ES CALCULEN LES MITJANES QUAN ES CTRIDA LA FUNCIÓ A TRAVÉS DE LA FUNCIÓ ANTERIOR, SÓN LES MITJANES CALCULADES PER L'ESTACIÓ DE TERRA 
+    global thread_mitjanaT, thread_mitjanaH
+
+    if stopCalc == False:
+        try:
+            thread_mitjanaT, mitjana_labelT = start_mitjanaT_label(
+                histT,
+                data_lock,
+                parent_widget=button_HT_frame,
+                interval=0.5,
+                row=4,
+                column=0
+                )
+            thread_mitjanaH, mitjana_labelH = start_mitjanaH_label(
+                histH,
+                data_lock,
+                parent_widget=button_HT_frame,
+                interval=0.5,
+                row=5,
+                column=0
+            )
+        except Exception as e:
+            print("Error iniciant els fils de mitjana:", e)
+    
+    else:    
+        return
+
+    
+    
 #Realment, les funcions seguents es podrien ajuntar en una de sola, de moment s'ha optat per deixar-ho aixi perque pot resultar més entenedor. En un futur es poden ajuntar.
 
-def Send_Ordres(Argument, info): 
+def Send_Ordres(Argument, info):
     #Estrucutra del missatge 
     #  2;    Codi de Argument        ;  Codi_Informacio
     #Acció   Odrdre (Start/stop)     Id_sys (temp, hum...)
     if Debug_RecepcioSimulada == False:
-        for i in len(Llista_Arguments_Ordres):  #Aquest pas no es extremadament nescesari, només està aqui pq sigui més facil de fer servir la funció per la persona que programa
+        trobat = 0
+        i = 0
+        while i < len(Llista_Arguments_Ordres) and trobat == 0:  #Aquest pas no es extremadament nescesari, només està aqui pq sigui més facil de fer servir la funció per la persona que programa
             if Llista_Arguments_Ordres[i] == Argument:
+                trobat = 1
                 Codi_Argument = i
+            else:
+                i = i+1
 
         if Codi_Argument == 0 or Codi_Argument == 1: # Si el argument == a Stop o Seguir
-            for i in len(llista_Id_sys):
+            trobat = 0
+            i = 0
+            while i < len(llista_Id_sys) and trobat == 0:
                 if llista_Id_sys[i] == info:
+                    trobat = 1
                     Info_Missatge = i
+                else:
+                    i=i+1
         
         missatgefinal = ("2;"+str(Codi_Argument)+";"+str(Info_Missatge)+";")
 
-        missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal)))
+        print(missatgefinal)
+
+        missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal))+"|")
         mySerial.write(missatgefinal.encode('utf-8'))
 
 def Send_Canvi_Frequencia(Id_Sys, ValorFreq):
     #Estrucutra del missatge 
     #  2;      2;    Id_sys;              Valor freq
     #Acció   Freq    Id_sys (temp, hum...)
-    if Debug_RecepcioSimulada:
-        for i in len(llista_Id_sys):
+    if Debug_RecepcioSimulada == False:
+        print("Send_Canvi_frequencia")
+        trobat = 0
+        i = 0
+        while i < len(llista_Id_sys) and trobat == 0:
             if llista_Id_sys[i] == Id_Sys:
+                trobat = 1  
                 Missatge_Id_Sys = i
+            else:
+                i=i+1
         
-        missatgefinal = ("2;2;"+str(Missatge_Id_Sys)+";"+str(abs(ValorFreq))+";")
-        missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal)))
+        missatgefinal = ("2;2;"+str(Missatge_Id_Sys)+";"+str(abs(ValorFreq))+";")   #no hauria de ser "2;3;..."?????????????????????????????????????????
+        missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal))+"|")
 
         mySerial.write(missatgefinal.encode('utf-8'))
 
@@ -118,6 +195,7 @@ def Send_Radar(Argument, Valor1, Valor2):
     #                                                    o de posició      (Només s'usa en el cas de lock)
     #                                                (depen de la acció)
     if Debug_RecepcioSimulada == False:
+        print("sendRadar")
         trobat = 0
         i = 0
         while trobat == 0 and i < len(llista_Arguments_Radar):
@@ -136,15 +214,22 @@ def Send_Radar(Argument, Valor1, Valor2):
         if Codi_Argument == 3: #En cas que sigui escombreig
             missatgefinal = ("3;"+str(Codi_Argument)+";")
 
-        missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal)))
+        missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal))+"|")
         
         mySerial.write(missatgefinal.encode('utf-8'))
         
+def activar_mitjanes_arduino():
+    global stopCalc
+    stopCalc = True  # Atura els fils
+    Send_Mitjanes_Arduino("temp", 10)
+    Send_Mitjanes_Arduino("hum", 10)
+
 def Send_Mitjanes_Arduino(Argument, Valor1): #Aquesta funció serveix nomès pq les mitjanes les faci l'arduino. No serveix perque les mitjanes siguin fetes a la Ground Station
     #                            Estrucutra del missatge 
     #  4;    Codi d'argument                           ;       Valor1         
     #Acció   Id_sys     Valor de velocitat                Nº de valors que ha 
-    #                                                     de tenir la mitjana     
+    #                                                     de tenir la mitjana  
+  
     if Debug_RecepcioSimulada == False: 
         trobat = 0
         i = 0
@@ -159,7 +244,7 @@ def Send_Mitjanes_Arduino(Argument, Valor1): #Aquesta funció serveix nomès pq 
             return -1 #Error, els elements Alarmes i Escombreig no accepten mitjana
         
         missatgefinal = ("4;"+str(Codi_Argument)+";"+str(Valor_Missatge)+";")
-        missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal)))
+        missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal))+"|")
         
         mySerial.write(missatgefinal.encode('utf-8'))
 
@@ -216,29 +301,79 @@ window.rowconfigure(2, weight=1)
 #tituloLabel.grid(row=0, column=0, columnspan=5, padx=5, pady=5, sticky=N + S + E + W)
 
 # FRAME CONTROLADOR TEMPERATURA I HUMITAT:
-button_HT_frame = LabelFrame(window, text = 'Humitat i Temperatura')
+button_HT_frame = LabelFrame(window, text = 'Humitat i Temperatura', font=("Arial", 15))
 button_HT_frame.grid(row=0, column=0, padx=5, pady=5, sticky=N + S + E + W)
 
 button_HT_frame.rowconfigure(0, weight=1)
 button_HT_frame.rowconfigure(1, weight=1)
+button_HT_frame.rowconfigure(2, weight=1)
+button_HT_frame.rowconfigure(3, weight=1)
+button_HT_frame.rowconfigure(4, weight=1)
+button_HT_frame.rowconfigure(5, weight=1)
+button_HT_frame.rowconfigure(6, weight=1)
+
 button_HT_frame.columnconfigure(0, weight=1)
 button_HT_frame.columnconfigure(1, weight=1)
 
-IniciarHTButton = Button(button_HT_frame, text="Play", bg='#6BD66B', fg="white", command=resumeHT)
+IniciarHTButton = Button(button_HT_frame, text="Play", bg='#6BD66B', fg="white", font=("Arial", 20), command=resumeHT)
 IniciarHTButton.grid(row=0, column=0, padx=5, pady=5, sticky=N + S + E + W)
 
-PararHTButton = Button(button_HT_frame, text="Pausa", bg='#FFB74D', fg="white", command=stopHT)
+PararHTButton = Button(button_HT_frame, text="Pausa", bg='#FFB74D', fg="white", font=("Arial", 20), command=stopHT)
 PararHTButton.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
 
-AplicarHTButton = Button(button_HT_frame, text="Aplicar", bg='#4DA3FF', fg="white", command=canvi_periodeHT)
-AplicarHTButton.grid(row=1, column=1, padx=5, pady=5, sticky=N + S + E + W)
+CalculArduinoButton = Button(button_HT_frame, text="Calcula la mitjana al satèl·lit", bg="#FF4D6B", fg="white", font=("Arial", 20), command=activar_mitjanes_arduino)
+CalculArduinoButton.grid(row=6, column=0, padx=5, pady=5, sticky=N + S + E + W)
 
-fraseHTEntry = Entry(button_HT_frame)
-fraseHTEntry.grid(row=1, column=0, columnspan = 1, padx=5, pady=5, sticky=N + S + E + W)
+CalculEstTerraButton = Button(button_HT_frame, text="Calcula la mitjana a l'estació de terra", bg='#FF4D6B', fg="white", font=("Arial", 20), command=activar_mitjanes_EstTerra)
+CalculEstTerraButton.grid(row=6, column=1, padx=5, pady=5, sticky=N + S + E + W)
+
+
+        ##FRAME CONTROLADOR DE PERIODE TEMPERATURA I HUMITAT
+periode_HT_frame = LabelFrame(button_HT_frame, text = 'Modificar el periode de transmissió', font=("Arial", 10))
+periode_HT_frame.grid(row=1, column=0, columnspan = 2, padx=5, pady=5, sticky=N + S + E + W)
+
+periode_HT_frame.rowconfigure(0, weight=1)
+periode_HT_frame.columnconfigure(0, weight=1)
+periode_HT_frame.columnconfigure(1, weight=1)
+
+AplicarHTButton = Button(periode_HT_frame, text="Aplicar", bg='#4DA3FF', fg="white", font=("Arial", 20), command=canvi_periodeHT)
+AplicarHTButton.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
+
+fraseHTEntry = Entry(periode_HT_frame, font=("Arial", 20))
+fraseHTEntry.grid(row=0, column=0, columnspan = 1, padx=5, pady=5, sticky=N + S + E + W)
+
+        ##FRAME TEMPERATURA MÀXIMA
+Tmax_HT_frame = LabelFrame(button_HT_frame, text = 'Temperatura màxima', font=("Arial", 10))
+Tmax_HT_frame.grid(row=2, column=0, columnspan = 2, padx=5, pady=5, sticky=N + S + E + W)
+
+Tmax_HT_frame.rowconfigure(0, weight=1)
+Tmax_HT_frame.columnconfigure(0, weight=1)
+Tmax_HT_frame.columnconfigure(1, weight=1)
+
+AplicarHTButton_Tmax = Button(Tmax_HT_frame, text="Aplicar", bg='#4DA3FF', fg="white", font=("Arial", 20), command=Tmax)
+AplicarHTButton_Tmax.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
+
+fraseHTEntry_Tmax = Entry(Tmax_HT_frame, font=("Arial", 20))
+fraseHTEntry_Tmax.grid(row=0, column=0, columnspan = 1, padx=5, pady=5, sticky=N + S + E + W)
+
+        ##FRAME HUMITAT MÀXIMA
+Hmax_HT_frame = LabelFrame(button_HT_frame, text = 'Humitat màxima', font=("Arial", 10))
+Hmax_HT_frame.grid(row=3, column=0, columnspan = 2, padx=5, pady=5, sticky=N + S + E + W)
+
+Hmax_HT_frame.rowconfigure(0, weight=1)
+Hmax_HT_frame.columnconfigure(0, weight=1)
+Hmax_HT_frame.columnconfigure(1, weight=1)
+
+AplicarHTButton_Hmax = Button(Hmax_HT_frame, text="Aplicar", bg='#4DA3FF', fg="white", font=("Arial", 20), command=Hmax)
+AplicarHTButton_Hmax.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
+
+fraseHTEntry_Hmax = Entry(Hmax_HT_frame, font=("Arial", 20))
+fraseHTEntry_Hmax.grid(row=0, column=0, columnspan = 1, padx=5, pady=5, sticky=N + S + E + W)
+
 
 # FRAME CONTROLADOR DADES DE DISTÀNCIA
 
-button_dist_frame = LabelFrame(window, text = 'Sensor de distància')
+button_dist_frame = LabelFrame(window, text = 'Sensor de distància', font=("Arial", 15))
 button_dist_frame.grid(row=1, column=0, padx=5, pady=5, sticky=N + S + E + W)
 
 button_dist_frame.rowconfigure(0, weight=1)
@@ -246,27 +381,35 @@ button_dist_frame.rowconfigure(1, weight=1)
 button_dist_frame.columnconfigure(0, weight=1)
 button_dist_frame.columnconfigure(1, weight=1)
 
-Iniciar_distButton = Button(button_dist_frame, text="Play", bg='#A8E6A3', fg="white", command=resume_dist)
+Iniciar_distButton = Button(button_dist_frame, text="Play", bg='#6BD66B', fg="white", font=("Arial", 20), command=Send_Ordres("seguir", "radar"))
 Iniciar_distButton.grid(row=0, column=0, padx=5, pady=5, sticky=N + S + E + W)
 
-Parar_distButton = Button(button_dist_frame, text="Pausa", bg='#FFD59E', fg="white", command=stop_dist)
+Parar_distButton = Button(button_dist_frame, text="Pausa", bg='#FFB74D', fg="white", font=("Arial", 20), command=Send_Ordres("stop", "radar"))
 Parar_distButton.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
 
-Aplicar_distButton = Button(button_dist_frame, text="Aplicar", bg='#A9D6F9', fg="white", command=canvi_periode_dist)
-Aplicar_distButton.grid(row=1, column=1, padx=5, pady=5, sticky=N + S + E + W)
+        ##FRAME CONTROLADOR DE PERIODE DISTÀNCIA
+periode_dist_frame = LabelFrame(button_dist_frame, text = 'Modificar el periode de transmissió', font=("Arial", 10))
+periode_dist_frame.grid(row=1, column=0, columnspan = 2, padx=5, pady=5, sticky=N + S + E + W)
 
-frase_distEntry = Entry(button_dist_frame)
-frase_distEntry.grid(row=1, column=0, columnspan = 1, padx=5, pady=5, sticky=N + S + E + W)
+periode_dist_frame.rowconfigure(0, weight=1)
+periode_dist_frame.columnconfigure(0, weight=1)
+periode_dist_frame.columnconfigure(1, weight=1)
+
+Aplicar_distButton = Button(periode_dist_frame, text="Aplicar", bg='#4DA3FF', fg="white", font=("Arial", 20), command=canvi_periode_dist)
+Aplicar_distButton.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
+
+frase_distEntry = Entry(periode_dist_frame, font=("Arial", 20))
+frase_distEntry.grid(row=0, column=0, columnspan = 1, padx=5, pady=5, sticky=N + S + E + W)
 
 # FRAME GRÀFICA HT
-grafHT_frame = LabelFrame(window, text = 'Gràfica temperatura i humitat')
+grafHT_frame = LabelFrame(window, text = 'Gràfica temperatura i humitat', font=("Arial", 15))
 grafHT_frame.grid(row=0, column=1, rowspan = 3, padx=5, pady=5, sticky=N + S + E + W)
 
 grafHT_frame.rowconfigure(0, weight=1)
 grafHT_frame.columnconfigure(0, weight=1)
 
 # FRAME GRÀFICA DISTÀNCIA
-graf_dist_frame = LabelFrame(window, text = 'Gràfica sensor de distància')
+graf_dist_frame = LabelFrame(window, text = 'Gràfica sensor de distància', font=("Arial", 15))
 graf_dist_frame.grid(row=0, column=2, rowspan = 3, padx=5, pady=5, sticky=N + S + E + W)
 
 graf_dist_frame.rowconfigure(0, weight=1)
@@ -285,6 +428,9 @@ axH.set_title("Humitat (%)")
 
 lineT, = axT.plot([], [], color='red')
 lineH, = axH.plot([], [], color='blue')
+
+lineMitjanaT, = axT.plot([], [], color='green', linestyle=':', linewidth=2)
+lineMitjanaH, = axH.plot([], [], color='purple', linestyle=':', linewidth=2)
 
 axT.set_xlim(0, 60)
 axT.set_ylim(0, 50)
@@ -321,15 +467,17 @@ def recepcion():
         if Debug_RecepcioSimulada == False :
             if mySerial and mySerial.in_waiting > 0:
                 linea = mySerial.readline().decode('utf-8').rstrip()
+                print(linea)
                 #Rebem la línea d'informació
 
                 #Comprovem el checksum
+                
                 Checksum_Missatge = linea.rsplit(";",1)[1] #Adruirim el ultim element de la llista, en aquest cas, el checksum
                 if Generar_Checksum(linea[0]) != Checksum_Missatge:
                     #Error en el checksum
                     Notificació_Alarma(3)
-
-                elif True: #iMPORTANT : DE MOMENT ESTÀ AIXI MENTRESTANT QUE EL CHECKSUM NO ESTÀ IMPLEMENTAT DEL TOT, UN COP SIUGI FUNCIONAL S'HA DE TREURE I DEIXAR NOMES EL ELSE
+                
+                elif True==False: #iMPORTANT : DE MOMENT ESTÀ AIXI MENTRESTANT QUE EL CHECKSUM NO ESTÀ IMPLEMENTAT DEL TOT, UN COP SIUGI FUNCIONAL S'HA DE TREURE I DEIXAR NOMES EL ELSE
                     data_chunks = linea.split(';') #Type list // data[x] = Type: str
                     accio = data_chunks[0]
                     data = data_chunks[1].split(":")
@@ -351,6 +499,7 @@ def recepcion():
                 #ALARMES
                     elif accio == 1:
                         Notificació_Alarma(data)
+                
                     
         else: 
             with data_lock: #No acabo d'entendre perque fem servir el thread.lock() si la variable que accedim no es compartida ni s'edita enlloc més
@@ -371,13 +520,37 @@ def recepcion():
 # ───────────────────────────────────────────────
 #FUNCIÓ PER ACTUALITZAR LA GRÀFICA DE TEMPERATURA I HUMITAT
 def actualitzar_graficaHT():
-    try: 
-        if contact: #No acabo d'entendre pq es fa servir if contact
+    try:
+        if contact:
+            # Actualitzar temperatura i humitat
             lineT.set_data(contact, histT)
             lineH.set_data(contact, histH)
-            #print("Grafica actuaitzant-se")
-            axT.set_xlim(max(0, contact[-1]-60), contact[-1]+5)
-            axH.set_xlim(max(0, contact[-1]-60), contact[-1]+5)
+
+            # ------ MITJANA TEMPERATURA (10 mostres) ------
+            if len(histT) >= 10:
+                mitjanesT = []
+                for i in range(len(histT)):
+                    if i < 9:
+                        mitjanesT.append(None)
+                    else:
+                        finestra = histT[i-9:i+1]
+                        mitjanesT.append(sum(finestra) / 10)
+                lineMitjanaT.set_data(contact, mitjanesT)
+
+            # ------ MITJANA HUMITAT (10 mostres) ------
+            if len(histH) >= 10:
+                mitjanesH = []
+                for i in range(len(histH)):
+                    if i < 9:
+                        mitjanesH.append(None)
+                    else:
+                        finestra = histH[i-9:i+1]
+                        mitjanesH.append(sum(finestra) / 10)
+                lineMitjanaH.set_data(contact, mitjanesH)
+
+            # Ajustos d'eixos
+            axT.set_xlim(max(0, contact[-1] - 60), contact[-1] + 5)
+            axH.set_xlim(max(0, contact[-1] - 60), contact[-1] + 5)
 
             axT.relim()
             axT.autoscale_view(scaley=True)
@@ -387,14 +560,119 @@ def actualitzar_graficaHT():
             canvas.draw_idle()
 
         window.after(500, actualitzar_graficaHT)
-    
+
     except Exception as e:
         print("ERROR a actualitzar_graficaHT:", e)
 
 
+# ───────────────────────────────────────────────
+# CÀLCUL DE MITJANA DE TEMPERATURES 
+# ───────────────────────────────────────────────
+
+def start_mitjanaT_label(histT, data_lock, parent_widget, interval=0.5, row=None, column=None):
+
+    #    Crea un Label a parent_widget i l'actualitza amb la mitjana de les últimes 10 temperatures.
 
 
-#FUNCIÓ PER ACTUALITZAR LA GRÀFICA DEL RADAR
+    mitjana_label = Label(parent_widget, text="Mitjana: --", font=("Arial", 20))
+    if row is None:
+        mitjana_label.pack()
+    else:
+        mitjana_label.grid(row=row, column=column, padx=5, pady=5, sticky="w")
+
+    def worker():
+        last_len = 0
+        while not stopCalc:
+            with data_lock:
+                cur_len = len(histT)
+                if cur_len != last_len:
+                    last_len = cur_len
+                    if cur_len >= 10:
+                        ultims = histT[-10:]
+                        mitjana = sum(ultims) / 10.0
+
+                        # ---- CONTROL DE 3 MITJANES CONSECUTIVES (TEMPERATURA) ----
+                        global consec_Tmax, Tmax_val
+                        if Tmax_val is not None:
+                            if mitjana > Tmax_val:
+                                consec_Tmax += 1
+                                if consec_Tmax == 3:
+                                    print("ALERTA: 3 mitjanes consecutives de temperatura superen el límit (detectat per l'estació de terra)")
+                            else:       
+                                consec_Tmax = 0
+                                
+                        text = f"Mitjana últimes 10 temperatures: {mitjana:.3f} °C"
+                    else:
+                        text = f"Només {cur_len} valors; esperant 10..."
+
+                    #evitem errors al tkinter
+                    if mitjana_label.winfo_exists():
+                        mitjana_label.after(0, lambda: mitjana_label.config(text=text))
+                    else:
+                        return  # El widget ja no existeix → parem el fil
+
+            time.sleep(interval)
+
+    th = threading.Thread(target=worker, daemon=True)
+    th.start()
+    return th, mitjana_label
+
+# ───────────────────────────────────────────────
+# CÀLCUL DE MITJANA DE HUMITATS 
+# ───────────────────────────────────────────────
+
+def start_mitjanaH_label(histH, data_lock, parent_widget, interval=0.5, row=None, column=None):
+    """
+    Crea un Label a parent_widget i l'actualitza amb la mitjana de les últimes 10 humitats.
+    """
+
+    mitjana_label = Label(parent_widget, text="Mitjana: --", font=("Arial", 20))
+    if row is None:
+        mitjana_label.pack()
+    else:
+        mitjana_label.grid(row=row, column=column, padx=5, pady=5, sticky="w")
+
+    def worker():
+        last_len = 0
+        while not stopCalc:
+            with data_lock:
+                cur_len = len(histH)
+                if cur_len != last_len:
+                    last_len = cur_len
+                    if cur_len >= 10:
+                        ultims = histH[-10:]
+                        mitjana = sum(ultims) / 10.0
+
+                        # ---- CONTROL DE 3 MITJANES CONSECUTIVES (HUMITAT) ----
+                        global consec_Hmax, Hmax_val
+                        if Hmax_val is not None:
+                            if mitjana > Hmax_val:
+                                consec_Hmax += 1
+                                if consec_Hmax == 3:
+                                    print("ALERTA: 3 mitjanes consecutives d'humitat superen el límit (detectat per l'estació de terra)")
+                            else:
+                                consec_Hmax = 0
+
+                        text = f"Mitjana últimes 10 humitats: {mitjana:.3f} %"
+                        
+                    else:
+                        text = f"Només {cur_len} valors; esperant 10..."
+
+                    #evitem errors al tkinter
+                    if mitjana_label.winfo_exists():
+                        mitjana_label.after(0, lambda: mitjana_label.config(text=text))
+                    else:
+                        return  # El widget ja no existeix → parem el fil            time.sleep(interval)
+
+    th = threading.Thread(target=worker, daemon=True)
+    th.start()
+    return th, mitjana_label
+
+
+# ───────────────────────────────────────────────
+# FUNCIÓ PER ACTUALITZAR LA GRÀFICA DEL RADAR 
+# ───────────────────────────────────────────────
+
 def actualitzar_grafica_radar():
     try:
         if (len(histAng)!=0 and len(histDist)!=0):

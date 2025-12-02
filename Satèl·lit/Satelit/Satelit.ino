@@ -150,9 +150,11 @@ void SendObservacions(){
     float t = GetTemp();
     int dist = GetDist();
     //Comunicació DEBUG
+    /*
     Serial.print(GetHum());
     Serial.print(":");
     Serial.println(GetTemp());
+    */
     //TELEMETRIA
     mySerial.print(0);
     mySerial.print(";");
@@ -184,7 +186,8 @@ void GetInfo (){
   if (mySerial.available()) {
     data = mySerial.readString();
     data.trim(); //elimina tots els caràcters que no siguin lletres. Essencial per poder fer els if's seguents
-    
+    Serial.println("hemRebut");
+    Serial.println(data);
     //PARSING
     int i = 0; //Acció Arguments (Id_Sys / Info) Valor
     int UltimIndexSeparador = 0;
@@ -202,6 +205,7 @@ void GetInfo (){
     //Crida de funcions relacionades amb la rebuda de dades
     //ORDRES
     if (ElementsUlitmMissatge[0] == "2"){ //Acció ->ORDRE
+      Serial.println("Ordre");
       if (ElementsUlitmMissatge[1] == 0){ //Argument -> Stop
         EstatFuncionamentSistemes[ElementsUlitmMissatge[2]] = 0;
 
@@ -209,7 +213,7 @@ void GetInfo (){
         EstatFuncionamentSistemes[ElementsUlitmMissatge[2]] = 1;
 
       } else if (ElementsUlitmMissatge[1] == "3"){ //Argument -> Canvi de freq
-        PeriodeEmisioDelsSistemes[ElementsUlitmMissatge[2]] = ElementsUlitmMissatge[3];
+        PeriodeEmisioDelsSistemes[ElementsUlitmMissatge[2]] = ElementsUlitmMissatge[3]; //
       }
     }
     //RADAR

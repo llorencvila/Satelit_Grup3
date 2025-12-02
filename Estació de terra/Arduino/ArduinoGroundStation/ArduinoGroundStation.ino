@@ -9,8 +9,10 @@ void setup() {
   Serial.begin(9600);
   mySerial.begin(9600);
   pinMode(5, OUTPUT);
+  pinMode(8, OUTPUT);
 }
 void loop() {
+  /*
   if (mySerial.available()) {
     data = mySerial.readString();
     data.trim(); //elimina tots els caràcters que no siguin lletres. Essencial per poder fer els if's seguents
@@ -36,10 +38,13 @@ void loop() {
       digitalWrite(5, LOW);  
     }
   }
+  */
+  if (Serial.available()) {  //agafa les i
+    String dataPc = Serial.readStringUntil("\n");
+    digitalWrite(8, HIGH);
 
-  if (Serial.available()) {  //agafa les instruccions del pc i les envia al satel·lit
-    String dataPc = Serial.readString();
-    myserial.println(dataPc);
+    mySerial.println(dataPc);
+    //Serial.println(dataPc);
     /*
     if (dataPc == "STOP") {
       mySerial.println("STOP");
@@ -47,5 +52,8 @@ void loop() {
       mySerial.println("REANUDAR");
     }
     */
+  }else{
+    digitalWrite(8,LOW);
+
   }
 }
