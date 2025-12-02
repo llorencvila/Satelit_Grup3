@@ -29,6 +29,10 @@ histH = []
 histT = []
 histAng = []
 histDist = []
+histmitjT = []
+histmitjH = []
+
+
 contact = []
 parametres = 4
 Llista_Arguments_Ordres = ["stop", "seguir", "freq"]
@@ -185,7 +189,7 @@ def Send_Canvi_Frequencia(Id_Sys, ValorFreq):
             else:
                 i=i+1
         
-        missatgefinal = ("2;2;"+str(Missatge_Id_Sys)+";"+str(abs(ValorFreq))+";")   #no hauria de ser "2;3;..."?????????????????????????????????????????
+        missatgefinal = ("2;2;"+str(Missatge_Id_Sys)+";"+str(abs(ValorFreq))+";")   
         missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal))+"|")
 
         mySerial.write(missatgefinal.encode('utf-8'))
@@ -228,9 +232,9 @@ def activar_mitjanes_arduino():
 
 def Send_Mitjanes_Arduino(Argument, Valor1): #Aquesta funció serveix nomès pq les mitjanes les faci l'arduino. No serveix perque les mitjanes siguin fetes a la Ground Station
     #                            Estrucutra del missatge 
-    #  4;    Codi d'argument                           ;       Valor1         
-    #Acció   Id_sys     Valor de velocitat                Nº de valors que ha 
-    #                                                     de tenir la mitjana  
+    #  4;    Codi d'argument        ;       Valor1         
+    #Acció   Id_sys                Nº de valors que ha 
+    #                              de tenir la mitjana  
   
     if Debug_RecepcioSimulada == False: 
         trobat = 0
@@ -239,6 +243,7 @@ def Send_Mitjanes_Arduino(Argument, Valor1): #Aquesta funció serveix nomès pq 
         while trobat == 0 and i < len(llista_Id_sys):
             if llista_Id_sys[i] == Argument:
                 Codi_Argument = Argument
+                trobat=1
 
         if Codi_Argument != 3 or Codi_Argument != 4: #Sempre que l'argument no sigui ni alarmes ni radar
             Valor_Missatge = abs(Valor1)
@@ -323,7 +328,7 @@ IniciarHTButton.grid(row=0, column=0, padx=5, pady=5, sticky=N + S + E + W)
 PararHTButton = Button(button_HT_frame, text="Pausa", bg='#FFB74D', fg="white", font=("Arial", 20), command=stopHT)
 PararHTButton.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
 
-CalculArduinoButton = Button(button_HT_frame, text="Calcula la mitjana al satèl·lit", bg="#FF4D6B", fg="white", font=("Arial", 20), command=activar_mitjanes_arduino)
+CalculArduinoButton = Button(button_HT_frame, text="Calcula la mitjana al satèl·lit", bg="#FF4D6B", fg="white", font=("Arial", 20), command=[Send_Mitjanes_Arduino ("temp",0),Send_Mitjanes_Arduino("hum",0)])
 CalculArduinoButton.grid(row=6, column=0, padx=5, pady=5, sticky=N + S + E + W)
 
 CalculEstTerraButton = Button(button_HT_frame, text="Calcula la mitjana a l'estació de terra", bg='#FF4D6B', fg="white", font=("Arial", 20), command=activar_mitjanes_EstTerra)
@@ -492,12 +497,16 @@ def recepcion():
                     print("Humitat:", data[0])
                     print("Temp:   ", data[1]) 
                     print("Pos:", (int (data[2])/4779)*360)
-                    print("Dist:   ", data[3]) 
+                    print("Dist:   ", data[3])
+                    print("Mitjana Hum:   ", data[4]) 
+                    print("Mitjana Temp:   ", data[5])
                     #print(temps())
                     histH.append(float(data[0]))
                     histT.append(float(data[1]))
                     histAng.append(float(data[2]))
                     histDist.append(float(data[3]))
+                    histmitjH.append(float(data[4]))
+                    histmitjT.append(float(data[5]))
                 #ALARMES
                     #elif accio == 1:
                     #    Notificació_Alarma(data)
@@ -509,6 +518,8 @@ def recepcion():
                 histT.append(float("%.2f" % random.uniform(10,25)))
                 histAng.append(float("%.2f" % random.uniform(0,180)))
                 histDist.append(float("%.2f" % random.uniform(0,100)))
+                histmitjH.append(float("%.2f" % random.uniform(0,100)))
+                histmitjT.append(float("%.2f" % random.uniform(0,100)))
                 contact.append(int(temps()))
                 #print(histH)
                 #print(contact)
@@ -603,7 +614,7 @@ def start_mitjanaT_label(histT, data_lock, parent_widget, interval=0.5, row=None
                             else:       
                                 consec_Tmax = 0
                                 
-                        text = f"Mitjana últimes 10 temperatures: {mitjana:.3f} °C"
+                        text = f"Mitj 10 temp (ET): {mitjana:.3f} °C"
                     else:
                         text = f"Només {cur_len} valors; esperant 10..."
 
@@ -655,7 +666,7 @@ def start_mitjanaH_label(histH, data_lock, parent_widget, interval=0.5, row=None
                             else:
                                 consec_Hmax = 0
 
-                        text = f"Mitjana últimes 10 humitats: {mitjana:.3f} %"
+                        text = f"Mitj  10 hum(ET): {mitjana:.3f} %"
                         
                     else:
                         text = f"Només {cur_len} valors; esperant 10..."
