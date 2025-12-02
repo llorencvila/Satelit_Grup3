@@ -18,17 +18,17 @@ DHT dht(DHTPin, DHTTYPE);
 unsigned long lastDHTMillis = 0;//Aixo ha migrat a ultima lectura     // Guarda el último momento de lectura válida
 unsigned long tiempoAlarma = 5000;  
 
-long UltimaLectura[3] = [0]*3; //TEMP HUM DIST en aquest ordre
+long UltimaLectura[3]; //TEMP HUM DIST en aquest ordre
 int Alarmes[3] = {0*3}; //Temp Hum Dist (en aquest ordre, els valors van de 0 (apagada) i 1(encesa))
 
-int EstatFuncionamentSistemes[5] = [1]*5; // Temp Hum Dist Alarmes Escombreig || LLista que ens perrmet controlar quins sistemes estàn encesos o no (per default estan engegats fins que rebin el comando contrari) 1 = ENGEGAT
-int PeriodeEmisioDelsSistemes[3] = [500]*3; //Temp Hum Dist, En aquest ordre
+int EstatFuncionamentSistemes[5] = {1,1,1,1,1}; // Temp Hum Dist Alarmes Escombreig || LLista que ens perrmet controlar quins sistemes estàn encesos o no (per default estan engegats fins que rebin el comando contrari) 1 = ENGEGAT
+int PeriodeEmisioDelsSistemes[3] = {500,500,500}; //Temp Hum Dist, En aquest ordre
 unsigned long NextMillis[3]; //Temp Hum Dist, En aquest ordre
 int NumeroValorsMitjanes[3]; //Temp Hum Dist, En aquest ordre
 
 int i = 0; //Acció Arguments (Id_Sys / Info) Valor
 int UltimIndexSeparador = 0;
-int IndexSeparador;
+int IndexSeparador = 0;
 
 //Nota: Seria bo plantejar-se fer una estrucutura per administrar millor tota aquesta quantitat de llistes
 
@@ -63,7 +63,7 @@ void setup(){
 
   dht.begin();
 
-  for (int i ; i<3; i++){ //recorre tots els elements de l'array nextmillis
+  for (int i = 0; i<3; i++){ //recorre tots els elements de l'array nextmillis
     NextMillis[i] = millis()+PeriodeEmisioDelsSistemes[i];
   }
 
@@ -124,7 +124,7 @@ int GetDist(){
     delayMicroseconds(10);
     digitalWrite(TriggerPin, LOW);
     
-    duration = pulseIn(EchoPin, HIGH);  //medimos el tiempo entre pulsos, en microsegundos
+    duration = pulseIn(EchoPin, HIGH, 20000);  //medimos el tiempo entre pulsos, en microsegundos
     
     distCm = duration * 10 / 292/ 2;   //convertimos a distancia, en cm
     return distCm;
@@ -190,10 +190,13 @@ void GetInfo (){
   if (mySerial.available()) {
     data = mySerial.readString();
     data.trim(); //elimina tots els caràcters que no siguin lletres. Essencial per poder fer els if's seguents
-    Serial.print("hemRebut: ");
+    Serial.println("hemRebut: ");
     Serial.println(data);
-    //PARSINGç
 
+  }
+    //PARSING
+    
+    
     while (i<4 || IndexSeparador != -1){
       IndexSeparador = data.indexOf(";");
 
@@ -205,28 +208,28 @@ void GetInfo (){
     }
     //Crida de funcions relacionades amb la rebuda de dades
     //ORDRES
-    if (ElementsUlitmMissatge[0] == "2"){ //Acció ->ORDRE
+    if (ElementsUlitmMissatge[0] == 2){ //Acció ->ORDRE
       Serial.println("Ordre");
       if (ElementsUlitmMissatge[1] == 0){ //Argument -> Stop
         EstatFuncionamentSistemes[ElementsUlitmMissatge[2]] = 0;
 
-      } else if (ElementsUlitmMissatge[1] == "2"){ //Argument -> Seguir
+      } else if (ElementsUlitmMissatge[1] == 2){ //Argument -> Seguir
         EstatFuncionamentSistemes[ElementsUlitmMissatge[2]] = 1;
 
-      } else if (ElementsUlitmMissatge[1] == "3"){ //Argument -> Canvi de freq
+      } else if (ElementsUlitmMissatge[1] == 3){ //Argument -> Canvi de freq
         PeriodeEmisioDelsSistemes[ElementsUlitmMissatge[2]] = ElementsUlitmMissatge[3]; //
       }
     }
     //RADAR
-    if (ElementsUlitmMissatge[0] == "3"){
+    if (ElementsUlitmMissatge[0] == 3){
 
-      if (ElementsUlitmMissatge[1] == "0"){
-        llargadaSteps == ElementsUlitmMissatge[2];
+      if (ElementsUlitmMissatge[1] == 0){
+        llargadaSteps = ElementsUlitmMissatge[2];
         //Realment canviem la llargada del cada desplaçament, és així pq la velocitat real del motor ja és la maxima de per si per tal de que no es cali
         
-      }else if (ElementsUlitmMissatge[1] == "1"){
+      }else if (ElementsUlitmMissatge[1] == 1){
         //CODI LOCK
-      } else if (ElementsUlitmMissatge[1] == "2"){
+      } else if (ElementsUlitmMissatge[1] == 2){
         pos = ElementsUlitmMissatge[2];
 
       }
@@ -234,12 +237,13 @@ void GetInfo (){
       }
     }
     //MITJANES
-    if (ElementsUlitmMissatge[0] == "4"){
+    if (ElementsUlitmMissatge[0] == 4){
       NumeroValorsMitjanes[ElementsUlitmMissatge[1]] = ElementsUlitmMissatge[2];
     }
     Serial.print(data);
 
   }
+
 //
 //
 void loop() {
@@ -251,7 +255,7 @@ void loop() {
 
     //CONTROL D'ALARMES
     if (EstatFuncionamentSistemes[3]==1){ 
-      for (int i=0; i<2;i++){
+      for (int i=0; i<3;i++){
         if (Alarmes[i] == 0 && millis()-UltimaLectura[i] > tiempoAlarma){
           Alarmes[i] = 1;
           SendAlarm(i);
