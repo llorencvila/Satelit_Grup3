@@ -212,8 +212,8 @@ void GetInfo (){
       } else if (ElementsUlitmMissatge[1] == "2"){ //Argument -> Seguir
         EstatFuncionamentSistemes[ElementsUlitmMissatge[2]] = 1;
 
-      } else if (ElementsUlitmMissatge[1] == "3"){ //Argument -> Canvi de freq
-        PeriodeEmisioDelsSistemes[ElementsUlitmMissatge[2]] = ElementsUlitmMissatge[3]; //
+      } else if (ElementsUlitmMissatge[1] == "3"){ //Argument -> Canvi de freq //OJUT QUE EL CODI NO ÉS "3"
+        PeriodeEmisioDelsSistemes[ElementsUlitmMissatge[2]] = ElementsUlitmMissatge[3]; 
       }
     }
     //RADAR

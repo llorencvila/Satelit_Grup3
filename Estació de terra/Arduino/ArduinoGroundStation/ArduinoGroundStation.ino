@@ -12,16 +12,17 @@ void setup() {
   pinMode(8, OUTPUT);
 }
 void loop() {
-  /*
+
   if (mySerial.available()) {
     data = mySerial.readString();
     data.trim(); //elimina tots els caràcters que no siguin lletres. Essencial per poder fer els if's seguents
-    
+    Serial.println(data);
+    /*
     //PARSING
     int i = 0; //Acció Arguments (Id_Sys / Info) Valor
     int UltimIndexSeparador = 0;
     int IndexSeparador;
-
+    
     while (i<4 || IndexSeparador != -1){
       IndexSeparador = data.indexOf(";");
 
@@ -37,10 +38,11 @@ void loop() {
     } else{
       digitalWrite(5, LOW);  
     }
-  }
+
   */
+  }
   if (Serial.available()) {  //agafa les i
-    String dataPc = Serial.readStringUntil("\n");
+    String dataPc = Serial.readString();
     digitalWrite(8, HIGH);
 
     mySerial.println(dataPc);

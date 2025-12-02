@@ -62,7 +62,9 @@ def temps():
     return time.time() - t0
 
 def Notificació_Alarma(arguments):
-    messagebox.showwarning("Alarma", noms_alarmes(arguments)) 
+    if arguments < len(noms_alarmes):
+        print("alarma")
+    #    messagebox.showwarning("Alarma", noms_alarmes[arguments]) 
 
 
 # ───────────────────────────────────────────────
@@ -467,38 +469,40 @@ def recepcion():
         if Debug_RecepcioSimulada == False :
             if mySerial and mySerial.in_waiting > 0:
                 linea = mySerial.readline().decode('utf-8').rstrip()
-                print(linea)
+                print("linea : "+str(linea))
                 #Rebem la línea d'informació
 
                 #Comprovem el checksum
-                
+                """
                 Checksum_Missatge = linea.rsplit(";",1)[1] #Adruirim el ultim element de la llista, en aquest cas, el checksum
                 if Generar_Checksum(linea[0]) != Checksum_Missatge:
                     #Error en el checksum
                     Notificació_Alarma(3)
-                
-                elif True==False: #iMPORTANT : DE MOMENT ESTÀ AIXI MENTRESTANT QUE EL CHECKSUM NO ESTÀ IMPLEMENTAT DEL TOT, UN COP SIUGI FUNCIONAL S'HA DE TREURE I DEIXAR NOMES EL ELSE
-                    data_chunks = linea.split(';') #Type list // data[x] = Type: str
-                    accio = data_chunks[0]
-                    data = data_chunks[1].split(":")
-                    #OBSERVACIONS
-                    if accio == 0: 
-                        if len(data) == parametres: #Comprovació que rebem totes les dades
-                            contact.append(int(temps()))
-                            print("Humitat:", data[0])
-                            print("Temp:   ", data[1]) 
-                            print("Pos:", (int (data[2])/4779)*360)
-                            print("Dist:   ", data[3]) 
-                            #print(temps())
-                            histH.append(float(data[0]))
-                            histT.append(float(data[1]))
-                            histAng.append(float(data[2]))
-                            histDist.append(float(data[3]))
+                """
+                #iMPORTANT : DE MOMENT ESTÀ AIXI MENTRESTANT QUE EL CHECKSUM NO ESTÀ IMPLEMENTAT DEL TOT, UN COP SIUGI FUNCIONAL S'HA DE TREURE I DEIXAR NOMES EL ELSE
+                data_chunks = linea.split(';') #Type list // data[x] = Type: str
+                accio = data_chunks[0]
+                print("Acció : "+str(accio))
+                data = data_chunks[1].split(":")
+                print(data)
+                #OBSERVACIONS
+                if accio == "0": 
+                    #if len(data) == parametres: #Comprovació que rebem totes les dades
+                    contact.append(int(temps()))
+                    print("Humitat:", data[0])
+                    print("Temp:   ", data[1]) 
+                    print("Pos:", (int (data[2])/4779)*360)
+                    print("Dist:   ", data[3]) 
+                    #print(temps())
+                    histH.append(float(data[0]))
+                    histT.append(float(data[1]))
+                    histAng.append(float(data[2]))
+                    histDist.append(float(data[3]))
 
-                            print (histH)
+                    print (histH)
                 #ALARMES
-                    elif accio == 1:
-                        Notificació_Alarma(data)
+                    #elif accio == 1:
+                    #    Notificació_Alarma(data)
                 
                     
         else: 
