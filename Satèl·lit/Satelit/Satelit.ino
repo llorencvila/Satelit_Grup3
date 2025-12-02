@@ -18,13 +18,17 @@ DHT dht(DHTPin, DHTTYPE);
 unsigned long lastDHTMillis = 0;//Aixo ha migrat a ultima lectura     // Guarda el último momento de lectura válida
 unsigned long tiempoAlarma = 5000;  
 
-long UltimaLectura[3] = {0*3}; //TEMP HUM DIST en aquest ordre
+long UltimaLectura[3] = [0]*3; //TEMP HUM DIST en aquest ordre
 int Alarmes[3] = {0*3}; //Temp Hum Dist (en aquest ordre, els valors van de 0 (apagada) i 1(encesa))
 
-int EstatFuncionamentSistemes[5] = {1*5}; // Temp Hum Dist Alarmes Escombreig || LLista que ens perrmet controlar quins sistemes estàn encesos o no (per default estan engegats fins que rebin el comando contrari) 1 = ENGEGAT
-int PeriodeEmisioDelsSistemes[3] = {500*3}; //Temp Hum Dist, En aquest ordre
+int EstatFuncionamentSistemes[5] = [1]*5; // Temp Hum Dist Alarmes Escombreig || LLista que ens perrmet controlar quins sistemes estàn encesos o no (per default estan engegats fins que rebin el comando contrari) 1 = ENGEGAT
+int PeriodeEmisioDelsSistemes[3] = [500]*3; //Temp Hum Dist, En aquest ordre
 unsigned long NextMillis[3]; //Temp Hum Dist, En aquest ordre
 int NumeroValorsMitjanes[3]; //Temp Hum Dist, En aquest ordre
+
+int i = 0; //Acció Arguments (Id_Sys / Info) Valor
+int UltimIndexSeparador = 0;
+int IndexSeparador;
 
 //Nota: Seria bo plantejar-se fer una estrucutura per administrar millor tota aquesta quantitat de llistes
 
@@ -186,12 +190,9 @@ void GetInfo (){
   if (mySerial.available()) {
     data = mySerial.readString();
     data.trim(); //elimina tots els caràcters que no siguin lletres. Essencial per poder fer els if's seguents
-    Serial.println("hemRebut");
+    Serial.print("hemRebut: ");
     Serial.println(data);
-    //PARSING
-    int i = 0; //Acció Arguments (Id_Sys / Info) Valor
-    int UltimIndexSeparador = 0;
-    int IndexSeparador;
+    //PARSINGç
 
     while (i<4 || IndexSeparador != -1){
       IndexSeparador = data.indexOf(";");
@@ -243,9 +244,9 @@ void GetInfo (){
 //
 void loop() {
   
-  MoureMotor();
+  //MoureMotor();
   GetInfo();
-  SendObservacions();
+  //SendObservacions();
 
 
     //CONTROL D'ALARMES
