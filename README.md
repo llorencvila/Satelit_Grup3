@@ -73,26 +73,26 @@ Adicionalment, per adreçar-se als diferents sistemes es fa servir el conjunt d'
 ## 3ª Entrega
 
 ### Requisits 3ª Entrega:
-- [ ] El controlador capta correctamente los datos de humedad, temperatura, distancia y posición del satélite.
-- [ ] La estación de tierra recibe correctamente los datos que le envía el controlador y los muestra en gráficas dinámicas apropiadas (incluida la gráfica 2D con la posición del satélite).
-- [ ] Las gráficas dinámicas están incrustadas en la interfaz gráfica.
-- [ ] Las gráficas también muestran la evolución del valor medio de las últimas 10 temperaturas.
-- [ ] El usuario puede elegir dónde deben calcularse las medias de las 10 últimas temperaturas (si en el satélite o en tierra).
-- [ ] El usuario puede parar/reanudar el envío de los datos de humedad/temperatura, el envio de datos de distancia y el envío de la posición del satélite.
+- [X] El controlador capta correctamente los datos de humedad, temperatura, distancia y posición del satélite.
+- [X] La estación de tierra recibe correctamente los datos que le envía el controlador y los muestra en gráficas dinámicas apropiadas (incluida la gráfica 2D con la posición del satélite).
+- [X] Las gráficas dinámicas están incrustadas en la interfaz gráfica.
+- [X] Las gráficas también muestran la evolución del valor medio de las últimas 10 temperaturas.
+- [X] El usuario puede elegir dónde deben calcularse las medias de las 10 últimas temperaturas (si en el satélite o en tierra).
+- [X] El usuario puede parar/reanudar el envío de los datos de humedad/temperatura, el envio de datos de distancia y el envío de la posición del satélite.
 - [ ] El usuario puede cambiar el periodo de envío de datos de temperatura/humedad, de distancia y de posición.
-- [ ] El controlador avisa correctamente a la estación de tierra en el caso de que no pueda captar bien los datos de temperatura/humedad o los datos de distancia (por ejemplo, porque se han desconectado los sensores).
-- [ ] La estación de tierra detecta un fallo en la comunicación con el controlador y avisa al usuario de esta circunstancia.
-- [ ] El usuario puede poner al sensor de distancia en modo rastreo (hace un barrido continuo de toda la zona alrededor del satelite) y también puede establecer una orientación determinada para el sensor.
-- [ ] El usuario puede establecer el valor máximo de temperatura que hará que salte una alarma si se reciben tres valores medios seguidos por encima de ese valor máximo.
+- [X] El controlador avisa correctamente a la estación de tierra en el caso de que no pueda captar bien los datos de temperatura/humedad o los datos de distancia (por ejemplo, porque se han desconectado los sensores).
+- [X] La estación de tierra detecta un fallo en la comunicación con el controlador y avisa al usuario de esta circunstancia.
+- [X] El usuario puede poner al sensor de distancia en modo rastreo (hace un barrido continuo de toda la zona alrededor del satelite) y también puede establecer una orientación determinada para el sensor.
+- [X] El usuario puede establecer el valor máximo de temperatura que hará que salte una alarma si se reciben tres valores medios seguidos por encima de ese valor máximo.
 - [ ] El usuario puede introducir en el sistema texto con sus observaciones en cualquier momento.
 - [ ] El sistema registra en ficheros los 3 tipos de eventos (alarmas, comandos y observaciones).
 - [ ] El usuario puede consultar en cualquier momento los eventos registrados, filtrando por dia y por tipo de evento.
-- [ ] El sistema funciona correctamente al sustituir la comunicación por cable por la comunicación inalámbrica.
-- [ ] El sistema de comunicaciones usa el mecanismo de checksum para detectar alteraciones en el mensaje.
-- [ ] El usuario de la estación de tierra no tiene ninguna duda de como interactuar con la interfaz gráfica ni para interpretar correctamente la información que se muestra en consola (tanto los datos como las alarmas)
-- [ ] El código está bien estructurado e indentado. Es fácil localizar en que parte del código que hace cada una de las operaciones de la versión 1.
-- [ ] Se han añadido comentarios clarificadores. En particular, hay comentarios que describen claramente el protocolo de aplicación. Cada función tiene un comentario que describe lo que hace, qué parámetros tiene y qué resultado produce.
-- [ ] Se ha implementado correctamente una cola circular para facilitar el cálculo de la media de los últimos 10 valores de temperatura.
+- [X] El sistema funciona correctamente al sustituir la comunicación por cable por la comunicación inalámbrica.
+- [X] El sistema de comunicaciones usa el mecanismo de checksum para detectar alteraciones en el mensaje.
+- [X] El usuario de la estación de tierra no tiene ninguna duda de como interactuar con la interfaz gráfica ni para interpretar correctamente la información que se muestra en consola (tanto los datos como las alarmas)
+- [X] El código está bien estructurado e indentado. Es fácil localizar en que parte del código que hace cada una de las operaciones de la versión 1.
+- [X] Se han añadido comentarios clarificadores. En particular, hay comentarios que describen claramente el protocolo de aplicación. Cada función tiene un comentario que describe lo que hace, qué parámetros tiene y qué resultado produce.
+- [X] Se ha implementado correctamente una cola circular para facilitar el cálculo de la media de los últimos 10 valores de temperatura.
 
 ### Video 3a Entrega
  [Video 3a Entrega](https://youtu.be/0R641AyqAaY)
