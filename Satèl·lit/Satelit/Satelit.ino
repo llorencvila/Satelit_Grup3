@@ -43,6 +43,20 @@ Stepper myStepper(stepsPerRotation, OUTPUT1, OUTPUT3, OUTPUT2, OUTPUT4);
 const int EchoPin = 9;
 const int TriggerPin = 3;
 
+// ------Constants de posició-------------
+const double G = 6.67430e-11;  // Gravitational constant (m^3 kg^-1 s^-2)
+const double M = 5.97219e24;   // Mass of Earth (kg)
+const double R_EARTH = 6371000;  // Radius of Earth (meters)
+const double ALTITUDE = 400000;  // Altitude of satellite above Earth's surface (meters)
+const double EARTH_ROTATION_RATE = 7.2921159e-5;  // Earth's rotational rate (radians/second)
+const unsigned long MILLIS_BETWEEN_UPDATES = 1000; // Time in milliseconds between each orbit simulation update
+const double  TIME_COMPRESSION = 90.0; // Time compression factor (90x)
+
+// Variables de posició
+unsigned long nextOrbitUpdate; // Time in milliseconds when the next orbit simulation update should occur
+double real_orbital_period;  // Real orbital period of the satellite (seconds)
+double r;  // Total distance from Earth's center to satellite
+
 // ===============================================================
 // SETUP
 // ===============================================================
@@ -60,6 +74,13 @@ void setup() {
   for (int i = 0; i < 4; i++) {
     NextMillis[i] = millis() + PeriodeEmisioDelsSistemes[i];
   }
+
+  // ======= INICIALITZACIÓ SIMULACIÓ ORBITA =======
+  r = R_EARTH + ALTITUDE;
+  real_orbital_period = 2 * PI * sqrt(pow(r, 3) / (G * M));
+
+  nextOrbitUpdate = millis() + MILLIS_BETWEEN_UPDATES;
+
 }
 
 // ===============================================================
@@ -174,6 +195,40 @@ void MoureMotor() {
 }
 
 // ===============================================================
+// SIMULACIÓ DE L'ÒRBITA
+// ===============================================================
+void simulate_orbit(unsigned long millisTime, double inclination, int ecef) {
+    double time = (millisTime / 1000.0) * TIME_COMPRESSION;
+    double angle = 2 * PI * (time / real_orbital_period);
+    double x = r * cos(angle);
+    double y = r * sin(angle) * cos(inclination);
+    double z = r * sin(angle) * sin(inclination);
+
+    if (ecef) {
+        double theta = EARTH_ROTATION_RATE * time;
+        double x_ecef = x * cos(theta) - y * sin(theta);
+        double y_ecef = x * sin(theta) + y * cos(theta);
+        x = x_ecef;
+        y = y_ecef;
+    }
+
+    Serial.print("Orbit | t=");
+    Serial.print(time);
+    Serial.print("s  X=");
+    Serial.print(x);
+    Serial.print("  Y=");
+    Serial.print(y);
+    Serial.print("  Z=");
+    Serial.println(z);
+  
+  return time
+  return x
+  return y
+  return z
+}
+
+
+// ===============================================================
 // TELEMETRIA
 // ===============================================================
 void SendObservacions() {
@@ -181,6 +236,10 @@ void SendObservacions() {
   float hum = GetHum();
   float temp = GetTemp();
   int dist2 = GetDist();
+  float time = simulate_orbit(time);
+  float time = simulate_orbit(x);
+  float time = simulate_orbit(y);
+  float time = simulate_orbit(z);
 
   // --- ACTUALITZAR BUFFERS ---
   if (temp != 0 && hum != 0 && temp != -1 && hum != -1) {
@@ -201,7 +260,19 @@ void SendObservacions() {
   mySerial.print(mitjanaHum());
   mySerial.print(":");
   mySerial.print(mitjanaTemp());
+  mySerial.print(":");
+
+  //dades de la òrbita
+  mySerial.print(time);
+  mySerial.print(:);
+  mySerial.print(x);
+  mySerial.print(:);
+  mySerial.print(y);
+  mySerial.print(:);
+  mySerial.println(z);
   mySerial.print("\n");
+
+  
 }
 
 void SendAlarm(int argument) {
@@ -272,10 +343,18 @@ void loop() {
   MoureMotor();
   GetInfo();
 
+  // ======= ACTUALITZAR SIMULACIÓ ORBITA =======
+  if (millis() >= nextOrbitUpdate) {
+    simulate_orbit(millis(), 0.1, 1);  // inclinació 0.1 rad, ECEF = true
+    nextOrbitUpdate = millis() + MILLIS_BETWEEN_UPDATES;
+  }
+
+
   if (millis() >= NextMillis[3]){
     SendObservacions();
     NextMillis[3] = millis() + 1000;
   }
+
 
   if (EstatFuncionamentSistemes[3] == 1) {
     for (int i = 0; i < 3; i++) {
@@ -287,3 +366,4 @@ void loop() {
     }
   }
 }
+
