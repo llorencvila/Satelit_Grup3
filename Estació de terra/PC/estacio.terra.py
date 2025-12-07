@@ -7,16 +7,19 @@ import time
 import threading
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import random
+import sys
+import re
+import matplotlib
 
 
-Debug_RecepcioSimulada = False #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
+Debug_RecepcioSimulada = True #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
                               #És d'utilitat per fer proves amb el codi si no es disposa del maquinari físic (els dos arduinos)
 
 # ───────────────────────────────────────────────
 # CONFIGURACIÓ DEL PORT SÈRIE 
 # ───────────────────────────────────────────────
 if Debug_RecepcioSimulada == False:
-    device = 'COM5'
+    device = 'COM7'
     mySerial = serial.Serial(device, 9600)
     print("funcionant:")
 
@@ -31,6 +34,10 @@ histAng = []
 histDist = []
 histmitjT = []
 histmitjH = []
+histTemps = []
+histCoordx = []
+histCoordy = []
+histCoordz = []
 
 
 contact = []
@@ -40,6 +47,9 @@ llista_Arguments_Radar = ["vel", "lock", "moure", "escombreig"]
 llista_Id_sys = ["temp", "hum", "radar", "alarmes", "escombreig", "all"]
 noms_alarmes = ["Temperatura", "Humitat", "Distancia", "Perduda Conexió"]
 
+R_EARTH = 6371000  # radi de la Terra en metres
+
+
 
 
 #variables per l'alarma de la mitjana de temperatura i humitat
@@ -48,6 +58,7 @@ consec_Tmax = 0
 consec_Hmax = 0
 Tmax_val = None
 Hmax_val = None
+mySerialOrbit = None
 
 stopCalc = False
 
@@ -306,10 +317,10 @@ def canvi_periode_dist(): ##Aquesta funció ha migrat a Send_Canvi_Frequencia
 # FINESTRA PRINCIPAL TKINTER
 # ───────────────────────────────────────────────
 window = Tk()
-window.geometry("10000x800")
+window.geometry("900x800")
 window.title("Control de transmissió de dades")
 
-window.columnconfigure(0, weight=1)
+window.columnconfigure(0, weight=2)
 window.columnconfigure(1, weight=1)
 window.columnconfigure(2, weight=1)
 window.rowconfigure(0, weight=1)
@@ -391,7 +402,7 @@ fraseHTEntry_Hmax = Entry(Hmax_HT_frame, font=("Arial", 20))
 fraseHTEntry_Hmax.grid(row=0, column=0, columnspan = 1, padx=5, pady=5, sticky=N + S + E + W)
 
 
-# FRAME CONTROLADOR DADES DE DISTÀNCIA
+        # FRAME CONTROLADOR DADES DE DISTÀNCIA
 
 button_dist_frame = LabelFrame(window, text = 'Sensor de distància', font=("Arial", 15))
 button_dist_frame.grid(row=1, column=0, padx=5, pady=5, sticky=N + S + E + W)
@@ -407,7 +418,7 @@ Iniciar_distButton.grid(row=0, column=0, padx=5, pady=5, sticky=N + S + E + W)
 Parar_distButton = Button(button_dist_frame, text="Pausa", bg='#FFB74D', fg="white", font=("Arial", 20), command=Send_Ordres("stop", "radar"))
 Parar_distButton.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
 
-        ##FRAME CONTROLADOR DE PERIODE DISTÀNCIA
+        #FRAME CONTROLADOR DE PERIODE DISTÀNCIA
 periode_dist_frame = LabelFrame(button_dist_frame, text = 'Modificar el periode de transmissió', font=("Arial", 10))
 periode_dist_frame.grid(row=1, column=0, columnspan = 2, padx=5, pady=5, sticky=N + S + E + W)
 
@@ -421,26 +432,57 @@ Aplicar_distButton.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
 frase_distEntry = Entry(periode_dist_frame, font=("Arial", 20))
 frase_distEntry.grid(row=0, column=0, columnspan = 1, padx=5, pady=5, sticky=N + S + E + W)
 
-# FRAME GRÀFICA HT
+        # FRAME GRÀFICA HT
 grafHT_frame = LabelFrame(window, text = 'Gràfica temperatura i humitat', font=("Arial", 15))
 grafHT_frame.grid(row=0, column=1, rowspan = 3, padx=5, pady=5, sticky=N + S + E + W)
 
 grafHT_frame.rowconfigure(0, weight=1)
 grafHT_frame.columnconfigure(0, weight=1)
 
-# FRAME GRÀFICA DISTÀNCIA
+        # FRAME GRÀFICA DISTÀNCIA
 graf_dist_frame = LabelFrame(window, text = 'Gràfica sensor de distància', font=("Arial", 15))
-graf_dist_frame.grid(row=0, column=2, rowspan = 3, padx=5, pady=5, sticky=N + S + E + W)
+graf_dist_frame.grid(row=0, column=2, padx=5, pady=5, sticky=N + S + E + W)
 
 graf_dist_frame.rowconfigure(0, weight=1)
 graf_dist_frame.columnconfigure(0, weight=1)
+
+        #FRAME SIMULADOR D'ÒRBITA
+graf_orbita_frame = LabelFrame(window, text='Òrbita satèl·lit', font=("Arial", 15))
+graf_orbita_frame.grid(row=1, column=2, padx=5, pady=5, sticky=N + S + E + W)
+
+graf_orbita_frame.rowconfigure(0, weight=1)
+graf_orbita_frame.columnconfigure(0, weight=1)
+
+# Figura òrbita
+fig_orbita, ax_orbita = plt.subplots(figsize=(5, 4))
+
+orbit_plot, = ax_orbita.plot([], [], 'bo-', markersize=2, label='Òrbita')
+last_point_plot = ax_orbita.scatter([], [], color='red', s=50, label='Últim punt')
+
+# Cercle Terra (vista pol nord)
+earth_circle = plt.Circle((0, 0), R_EARTH, color='orange', fill=False, label='Terra')
+ax_orbita.add_artist(earth_circle)
+
+ax_orbita.set_xlim(-7e6, 7e6)
+ax_orbita.set_ylim(-7e6, 7e6)
+ax_orbita.set_aspect('equal', 'box')
+ax_orbita.set_xlabel('X (m)')
+ax_orbita.set_ylabel('Y (m)')
+ax_orbita.set_title('Òrbita equatorial (vista pol nord)')
+ax_orbita.grid(True)
+ax_orbita.legend()
+
+canvas_orbita = FigureCanvasTkAgg(fig_orbita, master=graf_orbita_frame)
+canvas_orbita.get_tk_widget().grid(row=0, column=0, padx=5, pady=5, sticky=N+S+E+W)
+canvas_orbita.draw()
+
 
 
 # ───────────────────────────────────────────────
 # CONFIGURACIÓ DE LA FIGURA MATPLOTLIB
 # ───────────────────────────────────────────────
 
-#Grafica HT
+#-------------Grafica HT-------------
 fig, (axT, axH) = plt.subplots(2, 1, figsize=(5, 3), sharex=True)
 fig.subplots_adjust(hspace=0.4)
 axT.set_title("Temperatura (°C)")
@@ -463,7 +505,7 @@ canvas.get_tk_widget().grid(row=0, column=0, padx=5, pady=5, sticky=N+S+E+W)
 canvas.draw()
 
 
-#Grafica Radar
+#-------------Grafica Radar-------------
 figdist = plt.figure(figsize=(5,4))
 axdist = figdist.add_subplot(111, projection='polar')
 axdist.set_thetamin(0)
@@ -477,6 +519,19 @@ lineRadar, = axdist.plot([], [], linewidth=1)
 canvasRadar = FigureCanvasTkAgg(figdist, master=graf_dist_frame)
 canvasRadar.get_tk_widget().grid(row=0, column=0, sticky="nsew")
 canvasRadar.draw()
+
+#-------------Grafica Simulació de l'òrbita-------------
+def draw_earth_slice(z):
+    if abs(z) <= R_EARTH:
+        slice_radius = (R_EARTH**2 - z**2)**0.5
+    else:
+        slice_radius = 0
+    earth_slice = plt.Circle((0, 0), slice_radius, color='orange',
+                             fill=False, linestyle='--', label='Tall Terra a Z')
+    return earth_slice
+
+earth_slice = draw_earth_slice(0)
+ax_orbita.add_artist(earth_slice)
 
 
 # ───────────────────────────────────────────────
@@ -513,6 +568,10 @@ def recepcion():
                     print("Dist:   ", data[3])
                     print("Mitjana Hum:   ", data[4]) 
                     print("Mitjana Temp:   ", data[5])
+                    print("Temps òrbita:  ",data[6])
+                    print("Coord x:  ",data[7])
+                    print("Coord y:  ",data[8])
+                    print("Coord z:  ",data[9])
                     #print(temps())
                     histH.append(float(data[0]))
                     histT.append(float(data[1]))
@@ -520,6 +579,10 @@ def recepcion():
                     histDist.append(float(data[3]))
                     histmitjH.append(float(data[4]))
                     histmitjT.append(float(data[5]))
+                    histTemps.append(float(data[6]))
+                    histCoordx.append(float(data[7]))
+                    histCoordy.append(float(data[8]))
+                    histCoordz.append(float(data[9]))
                 #ALARMES
                     #elif accio == 1:
                     #    Notificació_Alarma(data)
@@ -533,6 +596,12 @@ def recepcion():
                 histDist.append(float("%.2f" % random.uniform(0,100)))
                 histmitjH.append(float("%.2f" % random.uniform(0,100)))
                 histmitjT.append(float("%.2f" % random.uniform(0,100)))
+                #histTemps.append(float(temps_sim))
+                histCoordx.append(float("%.2f" % random.uniform(0,6500000)))
+                histCoordy.append(float("%.2f" % random.uniform(0,6500000)))
+                histCoordz.append(float("%.2f" % random.uniform(0,6500000)))
+                #temps_sim += 1
+                #threading.Event().wait(1.0)
                 contact.append(int(temps()))
                 #print(histH)
                 #print(contact)
@@ -585,7 +654,9 @@ def actualitzar_graficaHT():
 
             canvas.draw_idle()
 
-        window.after(500, actualitzar_graficaHT)
+        window.after(50, actualitzar_graficaHT)
+
+
 
     except Exception as e:
         print("ERROR a actualitzar_graficaHT:", e)
@@ -741,6 +812,47 @@ def actualitzar_grafica_radar():
 
 
 
+# ───────────────────────────────────────────────────────────
+# FUNCIÓ PER ACTUALITZAR LA GRÀFICA DE SIMULACIÓ DE L'ÒRBITA
+# ───────────────────────────────────────────────────────────
+
+def actualitzar_grafica_orbita():
+    try:
+        if histCoordx and histCoordy:
+            # Actualitzar línia d’òrbita
+            orbit_plot.set_data(histCoordx, histCoordy)
+            last_point_plot.set_offsets([[histCoordx[-1], histCoordy[-1]]])
+
+            # Actualitzar tall de la Terra segons últim Z
+            global earth_slice
+            if histCoordz:
+                z = histCoordz[-1]
+            else:
+                z = 0
+
+            earth_slice.remove()
+            earth_slice = draw_earth_slice(z)
+            ax_orbita.add_artist(earth_slice)
+
+            # Ajust de límits si cal
+            x = histCoordx[-1]
+            y = histCoordy[-1]
+            xlim = ax_orbita.get_xlim()
+            ylim = ax_orbita.get_ylim()
+            max_x = max(abs(xlim[0]), abs(xlim[1]), abs(x))
+            max_y = max(abs(ylim[0]), abs(ylim[1]), abs(y))
+            new_lim = max(max_x, max_y) * 1.1
+            ax_orbita.set_xlim(-new_lim, new_lim)
+            ax_orbita.set_ylim(-new_lim, new_lim)
+
+            canvas_orbita.draw_idle()
+
+        window.after(200, actualitzar_grafica_orbita)
+
+    except Exception as e:
+        print("ERROR a actualitzar_grafica_orbita:", e)
+
+
 
 # ───────────────────────────────────────────────
 # LLANÇAR FIL I INICIAR GUI
@@ -752,8 +864,9 @@ threadRecepcion.start()
 
 # iniciar actualització periòdica
 window.after(50, actualitzar_graficaHT)
-
 window.after(200, actualitzar_grafica_radar)
+window.after(200, actualitzar_grafica_orbita)
+
 
 
 def on_close():
@@ -762,7 +875,10 @@ def on_close():
     if Debug_RecepcioSimulada == False:
         if mySerial:
             mySerial.close()
+        if mySerialOrbit:
+            mySerialOrbit.close()
     window.destroy()
+
 
 window.protocol("WM_DELETE_WINDOW", on_close)
 window.mainloop()
