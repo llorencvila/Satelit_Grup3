@@ -10,6 +10,11 @@ import random
 import sys
 import re
 import matplotlib
+import csv
+import os
+from datetime import datetime
+from tkinter import ttk
+
 
 
 Debug_RecepcioSimulada = True #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
@@ -49,9 +54,6 @@ noms_alarmes = ["Temperatura", "Humitat", "Distancia", "Perduda Conexió"]
 
 R_EARTH = 6371000  # radi de la Terra en metres
 
-
-
-
 #variables per l'alarma de la mitjana de temperatura i humitat
 
 consec_Tmax = 0
@@ -62,7 +64,13 @@ mySerialOrbit = None
 
 stopCalc = False
 
+# -------- Esdeveniments (log) -----------
+EVENTS_FILE = "events_log.csv"   # ruta del fitxer on es guarden els events
+EVENT_TYPES = ["Comanda", "Alarma", "Observació"]  # els tres tipus que demanes
 
+events = []   # llista de dicts: {"datetime": datetime obj, "tipo": str, "desc": str}
+events_lock = threading.Lock()  # per sincronitzar accés a events
+# ----------------------------------------
 
 
 data_lock = threading.Lock() #https://labex.io/es/tutorials/python-how-to-use-lock-in-python-s-threading-module-417460
@@ -77,9 +85,15 @@ def temps():
     return time.time() - t0
 
 def Notificació_Alarma(arguments):
+    # arguments indica codi d'alarma segons noms_alarmes
     if arguments < len(noms_alarmes):
-        print("alarma")
-    #    messagebox.showwarning("Alarma", noms_alarmes[arguments]) 
+        alarma_text = noms_alarmes[arguments]
+        print("alarma:", alarma_text)
+        # afegim event de tipus Alarma
+        add_event("Alarma", f"Codi {arguments}: {alarma_text}")
+        # Opcional: mostra missatge emergent
+        messagebox.showwarning("Alarma", alarma_text)
+
 
 
 # ───────────────────────────────────────────────
@@ -185,6 +199,12 @@ def Send_Ordres(Argument, info):
         missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal))+"|")
         mySerial.write(missatgefinal.encode('utf-8'))
         mySerial.write("\n".encode('utf-8'))
+            # Després d'enviar pel serial (o en mode debug), afegim l'event:
+    try:
+        add_event("Comanda", f"Enviada ordre: {Argument} -> {info}")
+    except Exception:
+        pass
+
 
 def Send_Canvi_Frequencia(Id_Sys, ValorFreq):
     #Estrucutra del missatge 
@@ -312,26 +332,103 @@ def canvi_periode_dist(): ##Aquesta funció ha migrat a Send_Canvi_Frequencia
     mySerial.write(periode_transmisio)
     print ('Has canviat el periode de transimsio a --- ' + frase_distEntry.get())
 
+# ───────────────────────────────────────────────
+# FUNCIONS REGISTRE D'EVENTS
+# ───────────────────────────────────────────────
+def _format_dt(dt):
+    # Format llegible per a l'usuari i per a guardar
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+def _parse_dt(s):
+    try:
+        return datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return None
+
+def load_events_from_file():
+    """Carrega events des del CSV a la llista events."""
+    global events
+    if not os.path.exists(EVENTS_FILE):
+        return
+    with events_lock:
+        with open(EVENTS_FILE, newline='', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            events = []
+            for row in reader:
+                dt = _parse_dt(row.get("datetime", ""))
+                tipo = row.get("type", "")
+                desc = row.get("description", "")
+                if dt:
+                    events.append({"datetime": dt, "type": tipo, "description": desc})
+
+def save_event_to_file(event):
+    """Afegeix un event (dict) al fitxer CSV (append)."""
+    header_needed = not os.path.exists(EVENTS_FILE)
+    with open(EVENTS_FILE, "a", newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        if header_needed:
+            writer.writerow(["datetime", "type", "description"])
+        writer.writerow([_format_dt(event["datetime"]), event["type"], event["description"]])
+
+def save_all_events_to_file():
+    """Escriu tots els events a l'arxiu (sobreescriu)."""
+    with events_lock:
+        with open(EVENTS_FILE, "w", newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(["datetime", "type", "description"])
+            for e in events:
+                writer.writerow([_format_dt(e["datetime"]), e["type"], e["description"]])
+
+def add_event(tipo, description, dt=None, persist=True):
+    """
+    Afegeix un event a la memòria (i opcionalment a fitxer).
+    - tipo: una de EVENT_TYPES
+    - description: text
+    - dt: datetime object (si None, s'usa ara)
+    - persist: si True, escriu al fitxer immediatament
+    """
+    if tipo not in EVENT_TYPES:
+        tipo = "Observació"  # fallback
+    if dt is None:
+        dt = datetime.now()
+    ev = {"datetime": dt, "type": tipo, "description": description}
+    with events_lock:
+        events.append(ev)
+    if persist:
+        try:
+            save_event_to_file(ev)
+        except Exception as e:
+            print("Error desant event:", e)
+    # Si hi ha un treeview d'esdeveniments visible, l'actualitzarem (si existeix)
+    try:
+        if 'events_treeview' in globals():
+            # refrescar vista (filtrada segons criteri actual)
+            refresh_events_treeview()
+    except Exception:
+        pass
+
     
 # ───────────────────────────────────────────────
 # FINESTRA PRINCIPAL TKINTER
 # ───────────────────────────────────────────────
 window = Tk()
-window.geometry("900x800")
+window.geometry("1100x710")
 window.title("Control de transmissió de dades")
 
-window.columnconfigure(0, weight=2)
-window.columnconfigure(1, weight=1)
-window.columnconfigure(2, weight=1)
-window.rowconfigure(0, weight=1)
-window.rowconfigure(1, weight=1)
-window.rowconfigure(2, weight=1)
+window.columnconfigure(0, weight=1, uniform="col")
+window.columnconfigure(1, weight=1, uniform="col")
+window.columnconfigure(2, weight=1, uniform="col")
+window.rowconfigure(0, weight=3, uniform="row")
+window.rowconfigure(1, weight=1, uniform="row")
+window.rowconfigure(2, weight=1, uniform="row")
+window.rowconfigure(3, weight=1, uniform="row")
+window.rowconfigure(4, weight=1)
 
 
 #tituloLabel = Label(window, text="Transmissió de dades", font=("Courier", 20, "italic"))
 #tituloLabel.grid(row=0, column=0, columnspan=5, padx=5, pady=5, sticky=N + S + E + W)
 
-# FRAME CONTROLADOR TEMPERATURA I HUMITAT:
+#─────────────────FRAME CONTROLADOR TEMPERATURA I HUMITAT:─────────────────
 button_HT_frame = LabelFrame(window, text = 'Humitat i Temperatura', font=("Arial", 15))
 button_HT_frame.grid(row=0, column=0, padx=5, pady=5, sticky=N + S + E + W)
 
@@ -346,20 +443,30 @@ button_HT_frame.rowconfigure(6, weight=1)
 button_HT_frame.columnconfigure(0, weight=1)
 button_HT_frame.columnconfigure(1, weight=1)
 
-IniciarHTButton = Button(button_HT_frame, text="Play", bg='#6BD66B', fg="white", font=("Arial", 20), command=resumeHT)
+IniciarHTButton = Button(button_HT_frame, text="Play", bg='#6BD66B', fg="white", font=("Arial", 15), command=resumeHT)
 IniciarHTButton.grid(row=0, column=0, padx=5, pady=5, sticky=N + S + E + W)
 
-PararHTButton = Button(button_HT_frame, text="Pausa", bg='#FFB74D', fg="white", font=("Arial", 20), command=stopHT)
+PararHTButton = Button(button_HT_frame, text="Pausa", bg='#FFB74D', fg="white", font=("Arial", 15), command=stopHT)
 PararHTButton.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
 
-CalculArduinoButton = Button(button_HT_frame, text="Calcula la mitjana al satèl·lit", bg="#FF4D6B", fg="white", font=("Arial", 20), command=MitjanesArduinoTkinterFriendly)
-CalculArduinoButton.grid(row=6, column=0, padx=5, pady=5, sticky=N + S + E + W)
+CalculArduinoButton = Button(button_HT_frame, text="Calcula la mitjana al satèl·lit", bg="#FF4D6B", fg="white", font=("Arial", 15), command=MitjanesArduinoTkinterFriendly)
+CalculArduinoButton.grid(row=6, column=0, padx=10, pady=5, sticky=N + S + E + W)
 
-CalculEstTerraButton = Button(button_HT_frame, text="Calcula la mitjana a l'estació de terra", bg='#FF4D6B', fg="white", font=("Arial", 20), command=activar_mitjanes_EstTerra)
-CalculEstTerraButton.grid(row=6, column=1, padx=5, pady=5, sticky=N + S + E + W)
+CalculEstTerraButton = Button(button_HT_frame, text="Calcula la mitjana a l'estació de terra", bg='#FF4D6B', fg="white", font=("Arial", 15), command=activar_mitjanes_EstTerra)
+CalculEstTerraButton.grid(row=6, column=1, padx=10, pady=5, sticky=N + S + E + W)
 
+label_mitjanaT_arduino = Label(button_HT_frame, text="Mitjana T Arduino: --", font=("Arial", 14))
+label_mitjanaT_arduino.grid(row=4, column=1, padx=5, pady=5, sticky=W)
 
-        ##FRAME CONTROLADOR DE PERIODE TEMPERATURA I HUMITAT
+label_mitjanaH_arduino = Label(button_HT_frame, text="Mitjana H Arduino: --", font=("Arial", 14))
+label_mitjanaH_arduino.grid(row=5, column=1, padx=5, pady=5, sticky=W)
+
+label_mitjanaT_ET = Label(button_HT_frame, text="Mitjana T ET: --", font=("Arial", 14))
+label_mitjanaT_ET.grid(row=4, column=0, padx=5, pady=5, sticky=W)
+
+label_mitjanaH_ET = Label(button_HT_frame, text="Mitjana H ET: --", font=("Arial", 14))
+label_mitjanaH_ET.grid(row=5, column=0, padx=5, pady=5, sticky=W)
+
 periode_HT_frame = LabelFrame(button_HT_frame, text = 'Modificar el periode de transmissió', font=("Arial", 10))
 periode_HT_frame.grid(row=1, column=0, columnspan = 2, padx=5, pady=5, sticky=N + S + E + W)
 
@@ -367,13 +474,13 @@ periode_HT_frame.rowconfigure(0, weight=1)
 periode_HT_frame.columnconfigure(0, weight=1)
 periode_HT_frame.columnconfigure(1, weight=1)
 
-AplicarHTButton = Button(periode_HT_frame, text="Aplicar", bg='#4DA3FF', fg="white", font=("Arial", 20), command=canvi_periodeHT)
+AplicarHTButton = Button(periode_HT_frame, text="Aplicar", bg='#4DA3FF', fg="white", font=("Arial", 15), command=canvi_periodeHT)
 AplicarHTButton.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
 
-fraseHTEntry = Entry(periode_HT_frame, font=("Arial", 20))
+fraseHTEntry = Entry(periode_HT_frame, font=("Arial", 15))
 fraseHTEntry.grid(row=0, column=0, columnspan = 1, padx=5, pady=5, sticky=N + S + E + W)
 
-        ##FRAME TEMPERATURA MÀXIMA
+#----------------FRAME TEMPERATURA MÀXIMA----------------
 Tmax_HT_frame = LabelFrame(button_HT_frame, text = 'Temperatura màxima', font=("Arial", 10))
 Tmax_HT_frame.grid(row=2, column=0, columnspan = 2, padx=5, pady=5, sticky=N + S + E + W)
 
@@ -381,13 +488,13 @@ Tmax_HT_frame.rowconfigure(0, weight=1)
 Tmax_HT_frame.columnconfigure(0, weight=1)
 Tmax_HT_frame.columnconfigure(1, weight=1)
 
-AplicarHTButton_Tmax = Button(Tmax_HT_frame, text="Aplicar", bg='#4DA3FF', fg="white", font=("Arial", 20), command=Tmax)
+AplicarHTButton_Tmax = Button(Tmax_HT_frame, text="Aplicar", bg='#4DA3FF', fg="white", font=("Arial", 15), command=Tmax)
 AplicarHTButton_Tmax.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
 
-fraseHTEntry_Tmax = Entry(Tmax_HT_frame, font=("Arial", 20))
+fraseHTEntry_Tmax = Entry(Tmax_HT_frame, font=("Arial", 15))
 fraseHTEntry_Tmax.grid(row=0, column=0, columnspan = 1, padx=5, pady=5, sticky=N + S + E + W)
 
-        ##FRAME HUMITAT MÀXIMA
+#----------------FRAME HUMITAT MÀXIMA----------------
 Hmax_HT_frame = LabelFrame(button_HT_frame, text = 'Humitat màxima', font=("Arial", 10))
 Hmax_HT_frame.grid(row=3, column=0, columnspan = 2, padx=5, pady=5, sticky=N + S + E + W)
 
@@ -395,15 +502,14 @@ Hmax_HT_frame.rowconfigure(0, weight=1)
 Hmax_HT_frame.columnconfigure(0, weight=1)
 Hmax_HT_frame.columnconfigure(1, weight=1)
 
-AplicarHTButton_Hmax = Button(Hmax_HT_frame, text="Aplicar", bg='#4DA3FF', fg="white", font=("Arial", 20), command=Hmax)
+AplicarHTButton_Hmax = Button(Hmax_HT_frame, text="Aplicar", bg='#4DA3FF', fg="white", font=("Arial", 15), command=Hmax)
 AplicarHTButton_Hmax.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
 
-fraseHTEntry_Hmax = Entry(Hmax_HT_frame, font=("Arial", 20))
+fraseHTEntry_Hmax = Entry(Hmax_HT_frame, font=("Arial", 15))
 fraseHTEntry_Hmax.grid(row=0, column=0, columnspan = 1, padx=5, pady=5, sticky=N + S + E + W)
 
 
-        # FRAME CONTROLADOR DADES DE DISTÀNCIA
-
+#─────────────────FRAME CONTROLADOR DADES DE DISTÀNCIA─────────────────
 button_dist_frame = LabelFrame(window, text = 'Sensor de distància', font=("Arial", 15))
 button_dist_frame.grid(row=1, column=0, padx=5, pady=5, sticky=N + S + E + W)
 
@@ -412,13 +518,13 @@ button_dist_frame.rowconfigure(1, weight=1)
 button_dist_frame.columnconfigure(0, weight=1)
 button_dist_frame.columnconfigure(1, weight=1)
 
-Iniciar_distButton = Button(button_dist_frame, text="Play", bg='#6BD66B', fg="white", font=("Arial", 20), command=Send_Ordres("seguir", "radar"))
+Iniciar_distButton = Button(button_dist_frame, text="Play", bg='#6BD66B', fg="white", font=("Arial", 15), command=Send_Ordres("seguir", "radar"))
 Iniciar_distButton.grid(row=0, column=0, padx=5, pady=5, sticky=N + S + E + W)
 
-Parar_distButton = Button(button_dist_frame, text="Pausa", bg='#FFB74D', fg="white", font=("Arial", 20), command=Send_Ordres("stop", "radar"))
+Parar_distButton = Button(button_dist_frame, text="Pausa", bg='#FFB74D', fg="white", font=("Arial", 15), command=Send_Ordres("stop", "radar"))
 Parar_distButton.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
 
-        #FRAME CONTROLADOR DE PERIODE DISTÀNCIA
+#----------------FRAME CONTROLADOR DE PERIODE DISTÀNCIA----------------
 periode_dist_frame = LabelFrame(button_dist_frame, text = 'Modificar el periode de transmissió', font=("Arial", 10))
 periode_dist_frame.grid(row=1, column=0, columnspan = 2, padx=5, pady=5, sticky=N + S + E + W)
 
@@ -426,29 +532,29 @@ periode_dist_frame.rowconfigure(0, weight=1)
 periode_dist_frame.columnconfigure(0, weight=1)
 periode_dist_frame.columnconfigure(1, weight=1)
 
-Aplicar_distButton = Button(periode_dist_frame, text="Aplicar", bg='#4DA3FF', fg="white", font=("Arial", 20), command=canvi_periode_dist)
+Aplicar_distButton = Button(periode_dist_frame, text="Aplicar", bg='#4DA3FF', fg="white", font=("Arial", 15), command=canvi_periode_dist)
 Aplicar_distButton.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
 
-frase_distEntry = Entry(periode_dist_frame, font=("Arial", 20))
+frase_distEntry = Entry(periode_dist_frame, font=("Arial", 15))
 frase_distEntry.grid(row=0, column=0, columnspan = 1, padx=5, pady=5, sticky=N + S + E + W)
 
-        # FRAME GRÀFICA HT
+#─────────────────FRAME GRÀFICA HT─────────────────
 grafHT_frame = LabelFrame(window, text = 'Gràfica temperatura i humitat', font=("Arial", 15))
-grafHT_frame.grid(row=0, column=1, rowspan = 3, padx=5, pady=5, sticky=N + S + E + W)
+grafHT_frame.grid(row=0, column=1, rowspan = 4, padx=5, pady=5, sticky=N + S + E + W)
 
 grafHT_frame.rowconfigure(0, weight=1)
 grafHT_frame.columnconfigure(0, weight=1)
 
-        # FRAME GRÀFICA DISTÀNCIA
+#─────────────────FRAME GRÀFICA DISTÀNCIA─────────────────
 graf_dist_frame = LabelFrame(window, text = 'Gràfica sensor de distància', font=("Arial", 15))
-graf_dist_frame.grid(row=0, column=2, padx=5, pady=5, sticky=N + S + E + W)
+graf_dist_frame.grid(row=0, column=2, rowspan = 2, padx=5, pady=5, sticky=N + S + E + W)
 
 graf_dist_frame.rowconfigure(0, weight=1)
 graf_dist_frame.columnconfigure(0, weight=1)
 
-        #FRAME SIMULADOR D'ÒRBITA
+#─────────────────FRAME SIMULADOR D'ÒRBITA─────────────────
 graf_orbita_frame = LabelFrame(window, text='Òrbita satèl·lit', font=("Arial", 15))
-graf_orbita_frame.grid(row=1, column=2, padx=5, pady=5, sticky=N + S + E + W)
+graf_orbita_frame.grid(row=2, column=2, rowspan = 2, padx=5, pady=5, sticky=N + S + E + W)
 
 graf_orbita_frame.rowconfigure(0, weight=1)
 graf_orbita_frame.columnconfigure(0, weight=1)
@@ -475,6 +581,165 @@ ax_orbita.legend()
 canvas_orbita = FigureCanvasTkAgg(fig_orbita, master=graf_orbita_frame)
 canvas_orbita.get_tk_widget().grid(row=0, column=0, padx=5, pady=5, sticky=N+S+E+W)
 canvas_orbita.draw()
+
+#─────────────────FRAME D'ESDEVENIMENTS / LOG─────────────────
+events_frame = LabelFrame(window, text='Registre d\'esdeveniments', font=("Arial", 15))
+events_frame.grid(row=2, rowspan=2, column=0, padx=5, pady=5, sticky=N+S+E+W)
+
+events_frame.rowconfigure(0, weight=0)
+events_frame.rowconfigure(1, weight=0)
+events_frame.rowconfigure(2, weight=1)
+events_frame.columnconfigure(0, weight=1)
+events_frame.columnconfigure(1, weight=1)
+events_frame.columnconfigure(2, weight=1)
+
+# 1) Entrada observacions usuari
+obs_label = Label(events_frame, text="Nova observació:", font=("Arial", 12))
+obs_label.grid(row=0, column=0, padx=5, pady=3, sticky="w")
+
+obs_entry = Entry(events_frame, font=("Arial", 12))
+obs_entry.grid(row=0, column=1, padx=5, pady=3, sticky="we")
+
+def on_add_observation():
+    text = obs_entry.get().strip()
+    if not text:
+        messagebox.showinfo("Info", "Introdueix una observació abans d'afegir.")
+        return
+    add_event("Observació", text)
+    obs_entry.delete(0, END)
+    messagebox.showinfo("OK", "Observació afegida i guardada.")
+
+add_obs_btn = Button(events_frame, text="Afegeix observació", command=on_add_observation, bg="#4DA3FF", fg="white", font=("Arial", 12))
+add_obs_btn.grid(row=0, column=2, padx=5, pady=3, sticky="e")
+
+# 2) Filtres: tipus i rang de dates
+filter_type_label = Label(events_frame, text="Filtrar per tipus:", font=("Arial", 10))
+filter_type_label.grid(row=1, column=0, padx=5, pady=3, sticky="w")
+filter_type_cb = ttk.Combobox(events_frame, values=["Tots"] + EVENT_TYPES, state="readonly")
+filter_type_cb.set("Tots")
+filter_type_cb.grid(row=1, column=1, padx=5, pady=3, sticky="we")
+
+#filter_from_label = Label(events_frame, text="Des (YYYY-MM-DD HH:MM:SS):", font=("Arial", 10))
+#filter_from_label.grid(row=1, column=2, padx=5, pady=3, sticky="w")
+#filter_from_entry = Entry(events_frame, font=("Arial", 10))
+#filter_from_entry.grid(row=1, column=2, padx=5, pady=3, sticky="e")  # ajusta si cal
+
+#filter_to_label = Label(events_frame, text="Fins (YYYY-MM-DD HH:MM:SS):", font=("Arial", 10))
+#filter_to_label.grid(row=1, column=2, padx=5, pady=3, sticky="w")
+
+# Per simplificar la disposició, fem dues entrades petites a sota:
+filter_from_entry = Entry(events_frame, font=("Arial", 10))
+#filter_from_entry.grid(row=1, column=1, padx=5, pady=3, sticky="w")
+filter_to_entry = Entry(events_frame, font=("Arial", 10))
+#filter_to_entry.grid(row=1, column=2, padx=5, pady=3, sticky="w")
+
+# 3) Treeview per mostrar events
+cols = ("datetime", "type", "description")
+events_treeview = ttk.Treeview(events_frame, columns=cols, show="headings", height=8)
+events_treeview.heading("datetime", text="Data i hora")
+events_treeview.heading("type", text="Tipus")
+events_treeview.heading("description", text="Descripció")
+events_treeview.column("datetime", width=150)
+events_treeview.column("type", width=80)
+events_treeview.column("description", width=500)
+events_treeview.grid(row=2, column=0, columnspan=3, sticky=N+S+E+W, padx=5, pady=5)
+
+# scrollbar
+sv = ttk.Scrollbar(events_frame, orient="vertical", command=events_treeview.yview)
+events_treeview.configure(yscrollcommand=sv.set)
+sv.grid(row=2, column=3, sticky='ns', padx=0, pady=5)
+
+def refresh_events_treeview():
+    """Omple el treeview amb els events filtrats segons els controls."""
+    # Llegim filtres
+    ftype = filter_type_cb.get()
+    ffrom = filter_from_entry.get().strip()
+    fto = filter_to_entry.get().strip()
+
+    dt_from = _parse_dt(ffrom) if ffrom else None
+    dt_to = _parse_dt(fto) if fto else None
+
+    # netejar treeview
+    for i in events_treeview.get_children():
+        events_treeview.delete(i)
+
+    with events_lock:
+        for e in events:
+            if ftype != "Tots" and ftype and e["type"] != ftype:
+                continue
+            if dt_from and e["datetime"] < dt_from:
+                continue
+            if dt_to and e["datetime"] > dt_to:
+                continue
+            events_treeview.insert("", "end",
+                                   values=(_format_dt(e["datetime"]), e["type"], e["description"]))
+
+# Botons d'actualitzar i esborrar filtres
+def on_apply_filter():
+    try:
+        refresh_events_treeview()
+    except Exception as ex:
+        print("Error filtrant events:", ex)
+
+def on_clear_filters():
+    filter_type_cb.set("Tots")
+    filter_from_entry.delete(0, END)
+    filter_to_entry.delete(0, END)
+    refresh_events_treeview()
+
+apply_filter_btn = Button(events_frame, text="Aplica filtre", command=on_apply_filter)
+apply_filter_btn.grid(row=3, column=1, sticky="e", padx=5, pady=3)
+clear_filter_btn = Button(events_frame, text="Neteja filtres", command=on_clear_filters)
+clear_filter_btn.grid(row=3, column=2, sticky="w", padx=5, pady=3)
+
+# Carregar events guardats i pintar-los
+load_events_from_file()
+refresh_events_treeview()
+
+# ────────────────── FRAME MANUAL D’ORDRES ──────────────────
+manual_cmd_frame = LabelFrame(window, text='Enviar comanda manual', font=("Arial", 15))
+manual_cmd_frame.grid(row=6, column=0, columnspan = 3, padx=5, pady=5, sticky=N+S+E+W)
+
+manual_cmd_frame.columnconfigure(0, weight=1, uniform="col")
+manual_cmd_frame.columnconfigure(1, weight=1, uniform="col")
+manual_cmd_frame.columnconfigure(2, weight=1, uniform="col")
+manual_cmd_frame.columnconfigure(3, weight=1, uniform="col")
+manual_cmd_frame.columnconfigure(4, weight=1, uniform="col")
+
+# --- DESPLEGABLE ACCIONS (5 opcions) ---
+opcions_accions = ["Acció 1", "Acció 2", "Acció 3", "Acció 4", "Acció 5"]
+combo_accions = ttk.Combobox(manual_cmd_frame, values=opcions_accions, state="readonly", font=("Arial", 12))
+combo_accions.set("Selecciona acció")
+combo_accions.grid(row=0, column=0, padx=5, pady=5, sticky=E+W)
+
+# --- DESPLEGABLE ARGUMENTS (10 opcions) ---
+opcions_arguments = [f"Argument {i}" for i in range(1, 11)]
+combo_arguments = ttk.Combobox(manual_cmd_frame, values=opcions_arguments, state="readonly", font=("Arial", 12))
+combo_arguments.set("Selecciona argument")
+combo_arguments.grid(row=0, column=1, padx=5, pady=5, sticky=E+W)
+
+# --- ENTRY VALOR 1 ---
+entry_valor1 = Entry(manual_cmd_frame, font=("Arial", 12))
+entry_valor1.grid(row=0, column=2, padx=5, pady=5, sticky=E+W)
+
+# --- ENTRY VALOR 2 ---
+entry_valor2 = Entry(manual_cmd_frame, font=("Arial", 12))
+entry_valor2.grid(row=0, column=3, padx=5, pady=5, sticky=E+W)
+
+
+# --- BOTÓ D’ENVIAR ---
+def enviar_comanda_manual():
+    accio = combo_accions.get()
+    argument = combo_arguments.get()
+    v1 = entry_valor1.get()
+    v2 = entry_valor2.get()
+
+    print("Comanda manual:", accio, argument, v1, v2)
+    messagebox.showinfo("Comanda enviada", f"{accio}, {argument}, {v1}, {v2}")
+
+send_cmd_btn = Button(manual_cmd_frame, text="Enviar", bg='#4DA3FF', fg="white",
+                      font=("Arial", 14), command=enviar_comanda_manual)
+send_cmd_btn.grid(row=0, column=4, padx=5, pady=5, sticky=E+W)
 
 
 
@@ -583,6 +848,9 @@ def recepcion():
                     histCoordx.append(float(data[7]))
                     histCoordy.append(float(data[8]))
                     histCoordz.append(float(data[9]))
+                    label_mitjanaT_arduino.config(text=f"Mitjana T Arduino: {histmitjT:.2f} °C")
+                    label_mitjanaH_arduino.config(text=f"Mitjana H Arduino: {histmitjH:.2f} %")
+
                 #ALARMES
                     #elif accio == 1:
                     #    Notificació_Alarma(data)
@@ -671,7 +939,7 @@ def start_mitjanaT_label(histT, data_lock, parent_widget, interval=0.5, row=None
     #    Crea un Label a parent_widget i l'actualitza amb la mitjana de les últimes 10 temperatures.
 
 
-    mitjana_label = Label(parent_widget, text="Mitjana: --", font=("Arial", 20))
+    mitjana_label = Label(parent_widget, text="Mitjana: --", font=("Arial", 14))
     if row is None:
         mitjana_label.pack()
     else:
@@ -723,7 +991,7 @@ def start_mitjanaH_label(histH, data_lock, parent_widget, interval=0.5, row=None
     Crea un Label a parent_widget i l'actualitza amb la mitjana de les últimes 10 humitats.
     """
 
-    mitjana_label = Label(parent_widget, text="Mitjana: --", font=("Arial", 20))
+    mitjana_label = Label(parent_widget, text="Mitjana: --", font=("Arial", 14))
     if row is None:
         mitjana_label.pack()
     else:
@@ -872,12 +1140,18 @@ window.after(200, actualitzar_grafica_orbita)
 def on_close():
     global running
     running = False
+    # Guardar events abans de tancar
+    try:
+        save_all_events_to_file()
+    except Exception as e:
+        print("Error guardant events al tancar:", e)
     if Debug_RecepcioSimulada == False:
         if mySerial:
             mySerial.close()
         if mySerialOrbit:
             mySerialOrbit.close()
     window.destroy()
+
 
 
 window.protocol("WM_DELETE_WINDOW", on_close)
