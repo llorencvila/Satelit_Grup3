@@ -14,10 +14,11 @@ import csv
 import os
 from datetime import datetime
 from tkinter import ttk
+import tkinter as tk
 
 
 
-Debug_RecepcioSimulada = True #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
+Debug_RecepcioSimulada = False #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
                               #És d'utilitat per fer proves amb el codi si no es disposa del maquinari físic (els dos arduinos)
 
 # ───────────────────────────────────────────────
@@ -78,21 +79,50 @@ data_lock = threading.Lock() #https://labex.io/es/tutorials/python-how-to-use-lo
 
 
 # ───────────────────────────────────────────────
-# FUNCIONS AUXILIARS HUMITAT I TEMPERATURA
+# FUNCIONS TEMPS I ALARMES
 # ───────────────────────────────────────────────
 print ("Funcionant")
 def temps():
     return time.time() - t0
 
 def Notificació_Alarma(arguments):
-    # arguments indica codi d'alarma segons noms_alarmes
     if arguments < len(noms_alarmes):
         alarma_text = noms_alarmes[arguments]
+
         print("alarma:", alarma_text)
-        # afegim event de tipus Alarma
         add_event("Alarma", f"Codi {arguments}: {alarma_text}")
-        # Opcional: mostra missatge emergent
-        messagebox.showwarning("Alarma", alarma_text)
+
+        # Important: cridar el Tkinter Toplevel des del MAIN THREAD
+        window.after(0, lambda: messagebox_no_modal("Alarma", alarma_text))
+
+# ─────────────────────────────────────────────────────
+# FUNCIÓ MESSAGEBOX QUE NO CONGELI TOT EL PROGRAMA
+# ─────────────────────────────────────────────────────
+
+def messagebox_no_modal(titol, text):
+    win = tk.Toplevel()
+    win.title(titol)
+    win.geometry("350x150")
+    win.resizable(False, False)
+    win.attributes("-topmost", True)
+
+    # Centra la finestra
+    win.update_idletasks()
+    x = (win.winfo_screenwidth() - win.winfo_width()) // 2
+    y = (win.winfo_screenheight() - win.winfo_height()) // 3
+    win.geometry(f"+{x}+{y}")
+
+    tk.Label (win, text=text, wraplength=300, justify="left", font = ("Helvetica",12,"bold"), fg="red").pack(pady=15)
+    tk.Button(
+        win,
+        text="OK",
+        command=win.destroy,
+        font=("Helvetica", 14, "bold"),  # font més gran
+        fg="white",
+        bg="red",
+        width=10,  # amplada del botó en caràcters
+        height=2   # alçada del botó en línies
+    ).pack(pady=10)
 
 
 
@@ -571,6 +601,7 @@ ax_orbita.add_artist(earth_circle)
 
 ax_orbita.set_xlim(-7e6, 7e6)
 ax_orbita.set_ylim(-7e6, 7e6)
+
 ax_orbita.set_aspect('equal', 'box')
 ax_orbita.set_xlabel('X (m)')
 ax_orbita.set_ylabel('Y (m)')
@@ -707,13 +738,13 @@ manual_cmd_frame.columnconfigure(3, weight=1, uniform="col")
 manual_cmd_frame.columnconfigure(4, weight=1, uniform="col")
 
 # --- DESPLEGABLE ACCIONS (5 opcions) ---
-opcions_accions = ["Acció 1", "Acció 2", "Acció 3", "Acció 4", "Acció 5"]
+opcions_accions = ["Ordres", "Radar", "Mitjanes"]
 combo_accions = ttk.Combobox(manual_cmd_frame, values=opcions_accions, state="readonly", font=("Arial", 12))
 combo_accions.set("Selecciona acció")
 combo_accions.grid(row=0, column=0, padx=5, pady=5, sticky=E+W)
 
 # --- DESPLEGABLE ARGUMENTS (10 opcions) ---
-opcions_arguments = [f"Argument {i}" for i in range(1, 11)]
+opcions_arguments = ["Stop","Start","Freqüència","Velocitat","Lock","Moure"]
 combo_arguments = ttk.Combobox(manual_cmd_frame, values=opcions_arguments, state="readonly", font=("Arial", 12))
 combo_arguments.set("Selecciona argument")
 combo_arguments.grid(row=0, column=1, padx=5, pady=5, sticky=E+W)
@@ -768,6 +799,9 @@ axH.set_ylim(0, 100)
 canvas = FigureCanvasTkAgg(fig, master=grafHT_frame)
 canvas.get_tk_widget().grid(row=0, column=0, padx=5, pady=5, sticky=N+S+E+W)
 canvas.draw()
+# Inserir gràfica HT a Tkinter 
+
+
 
 
 #-------------Grafica Radar-------------
@@ -848,13 +882,14 @@ def recepcion():
                     histCoordx.append(float(data[7]))
                     histCoordy.append(float(data[8]))
                     histCoordz.append(float(data[9]))
-                    label_mitjanaT_arduino.config(text=f"Mitjana T Arduino: {histmitjT:.2f} °C")
-                    label_mitjanaH_arduino.config(text=f"Mitjana H Arduino: {histmitjH:.2f} %")
+                    label_mitjanaT_arduino.config(text=f"Mitjana T Arduino: {float(data[5]):.2f} °C")
+                    label_mitjanaH_arduino.config(text=f"Mitjana H Arduino: {float(data[4]):.2f} %")
 
                 #ALARMES
-                    #elif accio == 1:
-                    #    Notificació_Alarma(data)
-                
+                elif accio == "1":
+                    threadNotificacio = threading.Thread(target=Notificació_Alarma(int(data[0])))
+                    threadNotificacio.start()
+                                    
                     
         else: 
             with data_lock: #No acabo d'entendre perque fem servir el thread.lock() si la variable que accedim no es compartida ni s'edita enlloc més
@@ -1103,6 +1138,7 @@ def actualitzar_grafica_orbita():
             ax_orbita.add_artist(earth_slice)
 
             # Ajust de límits si cal
+            '''''
             x = histCoordx[-1]
             y = histCoordy[-1]
             xlim = ax_orbita.get_xlim()
@@ -1112,6 +1148,8 @@ def actualitzar_grafica_orbita():
             new_lim = max(max_x, max_y) * 1.1
             ax_orbita.set_xlim(-new_lim, new_lim)
             ax_orbita.set_ylim(-new_lim, new_lim)
+            '''
+
 
             canvas_orbita.draw_idle()
 
