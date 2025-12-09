@@ -18,7 +18,7 @@ unsigned long tiempoAlarma = 5000;
 long UltimaLectura[3] = {0, 0, 0};      // Temp, Hum, Dist
 int Alarmes[3] = {0, 0, 0};             //Temp Hum Dist
 int EstatFuncionamentSistemes[6] = {1, 1, 1, 1, 1, 0}; 
-int PeriodeEmisioDelsSistemes[4] = {500, 500, 500, 1000};
+int PeriodeEmisioDelsSistemes[4] = {500, 500, 500, 1500};
 
 unsigned long NextMillis[4] = {0, 0, 0, 0};
 int NumeroValorsMitjanes[3] = {1, 1, 1};
@@ -127,6 +127,16 @@ float mitjanaHum() {
   return 0;
 }
 
+int CheckSum(String missatge) {
+  int llargada = missatge.length();
+  int suma = 0;
+
+  for (int i = 0; i<llargada ; i++){
+    sum =sum +missatge.charAt(i).toInt();
+  }
+  return sum;
+}
+
 // ===============================================================
 // LECTURES SENSORS
 // ===============================================================
@@ -220,11 +230,21 @@ void simulate_orbit(unsigned long millisTime, double inclination, int ecef) {
     Serial.print(y);
     Serial.print("  Z=");
     Serial.println(z);
-  
+
+    mySerial.print(time);
+    mySerial.print(":");
+    mySerial.print(x);
+    mySerial.print(":");
+    mySerial.print(y);
+    mySerial.print(":");
+    mySerial.print(z);
+  /*  
   return time
   return x
   return y
   return z
+  */
+
 }
 
 
@@ -236,10 +256,6 @@ void SendObservacions() {
   float hum = GetHum();
   float temp = GetTemp();
   int dist2 = GetDist();
-  float time = simulate_orbit(time);
-  float time = simulate_orbit(x);
-  float time = simulate_orbit(y);
-  float time = simulate_orbit(z);
 
   // --- ACTUALITZAR BUFFERS ---
   if (temp != 0 && hum != 0 && temp != -1 && hum != -1) {
@@ -263,13 +279,8 @@ void SendObservacions() {
   mySerial.print(":");
 
   //dades de la òrbita
-  mySerial.print(time);
-  mySerial.print(:);
-  mySerial.print(x);
-  mySerial.print(:);
-  mySerial.print(y);
-  mySerial.print(:);
-  mySerial.println(z);
+  simulate_orbit(millis(),0,0);
+
   mySerial.print("\n");
 
   
@@ -303,7 +314,7 @@ void GetInfo() {
   while ((sep = data.indexOf(";", start)) != -1 && idx < 4) {
     ElementsUltimMissatge[idx] = data.substring(start, sep).toInt();
     start = sep + 1;
-    idx++;
+    idx++;  
   }
 
   if (idx < 4)
@@ -313,6 +324,7 @@ void GetInfo() {
   int argument = ElementsUltimMissatge[1];
   int valor1 = ElementsUltimMissatge[2];
   int valor2 = ElementsUltimMissatge[3];
+  int CheckSum = ElementsUltimMissatge[]
 
   if (accio == 2) {
     if (argument == 0)   EstatFuncionamentSistemes[valor1] = 0;
@@ -344,15 +356,16 @@ void loop() {
   GetInfo();
 
   // ======= ACTUALITZAR SIMULACIÓ ORBITA =======
+  /*
   if (millis() >= nextOrbitUpdate) {
     simulate_orbit(millis(), 0.1, 1);  // inclinació 0.1 rad, ECEF = true
     nextOrbitUpdate = millis() + MILLIS_BETWEEN_UPDATES;
   }
-
+  */
 
   if (millis() >= NextMillis[3]){
     SendObservacions();
-    NextMillis[3] = millis() + 1000;
+    NextMillis[3] = millis() + PeriodeEmisioDelsSistemes[3];
   }
 
 

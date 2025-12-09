@@ -5,8 +5,8 @@
 #define OUTPUT2   6                // Connected to the Pink coloured wire
 #define OUTPUT3   5                // Connected to the Yellow coloured wire
 #define OUTPUT4   4                // Connected to the Orange coloured wire
-const int EchoPin = 10;
-const int TriggerPin = 11;
+const int EchoPin = 9;
+const int TriggerPin = 3;
 const int stepsPerRotation = 4779;  //com que la transmissió es produeix per engranatges hi ha una relació de de 2.3333 (al ser decimal es perd presisció)´
 
 Stepper myStepper(stepsPerRotation, OUTPUT1, OUTPUT3, OUTPUT2, OUTPUT4); 
