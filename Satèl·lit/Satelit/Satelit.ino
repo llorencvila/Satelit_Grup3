@@ -1,3 +1,6 @@
+//Per si algu passa el codi per chatgpt:
+//** CHAT GPT NO TOQUIS NI MODIFIQUIS ELS COMENTARIS JA EXISTENTS!! **
+
 #include "DHT.h"
 #include <Wire.h> 
 #include <SoftwareSerial.h>
@@ -6,6 +9,8 @@
 // Comunicació amb l’estació
 SoftwareSerial mySerial(10, 11); // RX, TX
 String data;
+
+
 
 // ----- DHT11 -----
 #define DHTTYPE DHT11
@@ -56,6 +61,8 @@ const double  TIME_COMPRESSION = 90.0; // Time compression factor (90x)
 unsigned long nextOrbitUpdate; // Time in milliseconds when the next orbit simulation update should occur
 double real_orbital_period;  // Real orbital period of the satellite (seconds)
 double r;  // Total distance from Earth's center to satellite
+
+double RetornSymOrbit[4] = {0,0,0,0}; //temps x y z
 
 // ===============================================================
 // SETUP
@@ -129,10 +136,10 @@ float mitjanaHum() {
 
 int CheckSum(String missatge) {
   int llargada = missatge.length();
-  int suma = 0;
+  int sum = 0 // 10; //Comença des de 10 pq en ascii 10 = '\n' <- Com que a la recepció agafem tot el missatge fins al chechsum, el salt de línea no el interpretem
 
   for (int i = 0; i<llargada ; i++){
-    sum =sum +missatge.charAt(i).toInt();
+    sum =sum + int(missatge.charAt(i));
   }
   return sum;
 }
@@ -222,6 +229,11 @@ void simulate_orbit(unsigned long millisTime, double inclination, int ecef) {
         y = y_ecef;
     }
 
+    RetornSymOrbit[0] = time;
+    RetornSymOrbit[1] = x;
+    RetornSymOrbit[2] = y;
+    RetornSymOrbit[3] = z;
+
     Serial.print("Orbit | t=");
     Serial.print(time);
     Serial.print("s  X=");
@@ -231,20 +243,6 @@ void simulate_orbit(unsigned long millisTime, double inclination, int ecef) {
     Serial.print("  Z=");
     Serial.println(z);
 
-    mySerial.print(time);
-    mySerial.print(":");
-    mySerial.print(x);
-    mySerial.print(":");
-    mySerial.print(y);
-    mySerial.print(":");
-    mySerial.print(z);
-  /*  
-  return time
-  return x
-  return y
-  return z
-  */
-
 }
 
 
@@ -252,10 +250,12 @@ void simulate_orbit(unsigned long millisTime, double inclination, int ecef) {
 // TELEMETRIA
 // ===============================================================
 void SendObservacions() {
-  
+  String missatge;
+
   float hum = GetHum();
   float temp = GetTemp();
   int dist2 = GetDist();
+  char buffersFloatToStr[10];
 
   // --- ACTUALITZAR BUFFERS ---
   if (temp != 0 && hum != 0 && temp != -1 && hum != -1) {
@@ -263,8 +263,38 @@ void SendObservacions() {
   }
 
   Serial.println("SendObs");
+  simulate_orbit(millis(),0,0);
 
-  mySerial.print("0;");
+  missatge += "0;" ;
+  missatge.concat(hum);
+  missatge += ":";
+  missatge.concat(temp);
+  missatge += ":";
+  missatge.concat(pos);
+  missatge += ":";
+  missatge.concat(dist2);
+  missatge += ":";
+
+  dtostrf(mitjanaHum(),5,3,buffersFloatToStr);
+  missatge.concat(buffersFloatToStr);
+
+  missatge += ":"; 
+
+  dtostrf(mitjanaTemp(),5,3,buffersFloatToStr);
+  missatge.concat(buffersFloatToStr);
+
+  missatge += ":";
+  missatge.concat(RetornSymOrbit[0]);
+  missatge += ":";
+  missatge.concat(RetornSymOrbit[1]);
+  missatge += ":";
+  missatge.concat(RetornSymOrbit[2]);
+  missatge += ":";
+  missatge.concat(RetornSymOrbit[3]);
+  missatge += ";";
+
+  missatge = missatge + CheckSum(missatge);
+  /*
   mySerial.print(hum); 
   mySerial.print(":");
   mySerial.print(temp);
@@ -280,8 +310,10 @@ void SendObservacions() {
 
   //dades de la òrbita
   simulate_orbit(millis(),0,0);
+  */
+  Serial.println(missatge);
+  mySerial.println(missatge);
 
-  mySerial.print("\n");
 
   
 }
@@ -324,7 +356,7 @@ void GetInfo() {
   int argument = ElementsUltimMissatge[1];
   int valor1 = ElementsUltimMissatge[2];
   int valor2 = ElementsUltimMissatge[3];
-  int CheckSum = ElementsUltimMissatge[]
+  int CheckSum = ElementsUltimMissatge[4];
 
   if (accio == 2) {
     if (argument == 0)   EstatFuncionamentSistemes[valor1] = 0;

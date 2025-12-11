@@ -2,7 +2,7 @@
 SoftwareSerial mySerial(10, 11);  // RX, TX (azul, naranja)
 String data;
 
-int ElementsUlitmMissatge[4]; //Acció Arguments (Id_Sys / Info) Valor || Llista d'elements que pot tenir l'ulitm missatge, CONSULTAR EXCEL PROTOCOL BITS en cas de dubte
+int ElementsUlitmMissatge[4];  //Acció Arguments (Id_Sys / Info) Valor || Llista d'elements que pot tenir l'ulitm missatge, CONSULTAR EXCEL PROTOCOL BITS en cas de dubte
 
 
 void setup() {
@@ -15,7 +15,7 @@ void loop() {
 
   if (mySerial.available()) {
     data = mySerial.readString();
-    data.trim(); //elimina tots els caràcters que no siguin lletres. Essencial per poder fer els if's seguents
+    data.trim();  //elimina tots els caràcters que no siguin lletres. Essencial per poder fer els if's seguents
     Serial.println(data);
     /*
     //PARSING
@@ -54,8 +54,7 @@ void loop() {
       mySerial.println("REANUDAR");
     }
     */
-  }else{
-    digitalWrite(8,LOW);
-
+  } else {
+    digitalWrite(8, LOW);
   }
 }
