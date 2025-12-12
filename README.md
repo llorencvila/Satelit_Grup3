@@ -53,6 +53,7 @@ Adicionalment, per adreçar-se als diferents sistemes es fa servir el conjunt d'
       - Id_Sys
   - Freq (010)
       - Id_sys
+          - Freqüència
   
 - **Radar (011)**
     - Vel (000)
