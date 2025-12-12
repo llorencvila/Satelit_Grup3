@@ -16,9 +16,7 @@ from datetime import datetime
 from tkinter import ttk
 import tkinter as tk
 
-
-
-Debug_RecepcioSimulada = False #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
+Debug_RecepcioSimulada = True #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
                               #És d'utilitat per fer proves amb el codi si no es disposa del maquinari físic (els dos arduinos)
 
 # ───────────────────────────────────────────────
@@ -51,7 +49,11 @@ parametres = 4
 Llista_Arguments_Ordres = ["stop", "seguir", "freq"]
 llista_Arguments_Radar = ["vel", "lock", "moure", "escombreig"]
 llista_Id_sys = ["temp", "hum", "radar", "alarmes", "escombreig", "all"]
+<<<<<<< HEAD
 noms_alarmes = ["Temperatura", "Humitat", "Distancia", "Perduda Conexió", "Error de sintaxi"]
+=======
+noms_alarmes = ["Temperatura", "Humitat", "Distancia", "Perduda Conexió","Error de sintaxi"]
+>>>>>>> 203170ab746c4b58d674adeadce9973869818ff6
 
 R_EARTH = 6371000  # radi de la Terra en metres
 
@@ -95,6 +97,15 @@ def Notificació_Alarma(arguments):
         # Important: cridar el Tkinter Toplevel des del MAIN THREAD
         window.after(0, lambda: messagebox_no_modal("Alarma", alarma_text))
 
+def validar_numero(entry_widget):
+    try:
+        return float(entry_widget.get())
+    except ValueError:
+        # Activa alarma “Error de sintaxi” (codi 4)
+        Notificació_Alarma(4)
+        add_event("Alarma", "Error de sintaxi: valor no numèric")
+        return None
+
 # ─────────────────────────────────────────────────────
 # FUNCIÓ MESSAGEBOX QUE NO CONGELI TOT EL PROGRAMA
 # ─────────────────────────────────────────────────────
@@ -125,25 +136,26 @@ def messagebox_no_modal(titol, text):
     ).pack(pady=10)
 
 
-
 # ───────────────────────────────────────────────
 # FUNCIONS PER ENVIAR DADES
 # ───────────────────────────────────────────────
 
-def stopHT(): #Aquesta funció ha migrat a Send_Ordres
+def stopHT(): 
     Send_Ordres("stop","temp")
-    #Send_Ordres("stop", "hum")
+    Send_Ordres("stop", "hum")
     print("STOP")
     #mySerial.close
 
-def resumeHT(): #Aquesta funció ha migrat a Send_Ordres
+def resumeHT():
     Send_Ordres("seguir","temp")
     Send_Ordres("seguir", "hum")
     print("REANUDAR")
 
-def canvi_periodeHT(): ##Aquesta funció ha migrat a Send_Canvi_Frequencia
+def canvi_periodeHT():
     Send_Canvi_Frequencia("temp", fraseHTEntry.get())
     Send_Canvi_Frequencia("hum", fraseHTEntry.get())
+    add_event("Comanda", f"Canvi període HT a {fraseHTEntry.get()}")     #registre d'events
+    validar_numero(fraseHTEntry)       #alarma sino s'ha entroduint un valor correcte
 
 def Tmax():
     global Tmax_val
@@ -152,6 +164,8 @@ def Tmax():
         print('La temperatura màxima és:' + fraseHTEntry_Tmax.get())
     except ValueError:
         print("Error: no has introduït un número.")
+    add_event("Comanda", f"Tmax configurat a {fraseHTEntry_Tmax.get()}")     #registre d'events
+    validar_numero(fraseHTEntry_Tmax)       #alarma sino s'ha entroduint un valor correcte
 
 def Hmax():
     global Hmax_val
@@ -160,11 +174,15 @@ def Hmax():
         print('La humitat màxima és:' + fraseHTEntry_Hmax.get())
     except ValueError:
         print("Error: no has introduït un número.")
+    add_event("Comanda", f"Hmax configurat a {fraseHTEntry_Hmax.get()}")     #registre d'events
+    validar_numero(fraseHTEntry_Hmax)       #alarma sino s'ha entroduint un valor correcte
+
 
 def activar_mitjanes_EstTerra():
     global stopCalc
     stopCalc = False
     mitjanes_EstTerra()
+    add_event("Comanda", "Mitjanes Estació de terra")     #registre d'events
 
 
 def mitjanes_EstTerra(): #NOMÉS ES CALCULEN LES MITJANES QUAN ES CTRIDA LA FUNCIÓ A TRAVÉS DE LA FUNCIÓ ANTERIOR, SÓN LES MITJANES CALCULADES PER L'ESTACIÓ DE TERRA 
@@ -289,12 +307,7 @@ def Send_Radar(Argument, Valor1, Valor2):
         
         mySerial.write(missatgefinal.encode('utf-8'))
         mySerial.write("\n".encode('utf-8'))
-        
-def activar_mitjanes_arduino():
-    global stopCalc
-    stopCalc = True  # Atura els fils
-    Send_Mitjanes_Arduino("temp", 10)
-    Send_Mitjanes_Arduino("hum", 10)
+
 
 def Send_Mitjanes_Arduino(Argument, Valor1): #Aquesta funció serveix nomès pq les mitjanes les faci l'arduino. No serveix perque les mitjanes siguin fetes a la Ground Station
     #                            Estrucutra del missatge 
@@ -335,12 +348,27 @@ def MitjanesArduinoTkinterFriendly():
     print("mitjana arduino")
     Send_Mitjanes_Arduino("temp",0)
     Send_Mitjanes_Arduino("hum",0)
+    add_event("Comanda", "Mitjanes Satèl·lit")     #registre d'events
 
 
 # ───────────────────────────────────────────────
 # FUNCIONS AUXILIARS DISTANCIA
 # ───────────────────────────────────────────────
 
+def radar_play():
+    Send_Ordres("seguir", "radar")
+    #add_event("Comanda", "Radar PLAY")
+
+def radar_stop():
+    Send_Ordres("stop", "radar")
+    #add_event("Comanda", "Radar STOP")
+
+def canvi_periodedist():
+    Send_Canvi_Frequencia("dist", frase_distEntry.get())
+    add_event("Comanda", f"Canvi període distància a {frase_distEntry.get()}")     #registre d'events
+    validar_numero(frase_distEntry)       #alarma sino s'ha entroduint un valor correcte
+
+'''''''''
 def stop_dist(): #Aquesta funció ha migrat a Send_Ordres
     if Debug_RecepcioSimulada == False:
         mensaje = "STOP"
@@ -361,6 +389,7 @@ def canvi_periode_dist(): ##Aquesta funció ha migrat a Send_Canvi_Frequencia
     periode_transmisio = "periode" +frase_distEntry.get()
     mySerial.write(periode_transmisio)
     print ('Has canviat el periode de transimsio a --- ' + frase_distEntry.get())
+'''''''''
 
 # ───────────────────────────────────────────────
 # FUNCIONS REGISTRE D'EVENTS
@@ -376,7 +405,7 @@ def _parse_dt(s):
         return None
 
 def load_events_from_file():
-    """Carrega events des del CSV a la llista events."""
+    #Carrega events des del CSV a la llista events.
     global events
     if not os.path.exists(EVENTS_FILE):
         return
@@ -417,25 +446,48 @@ def add_event(tipo, description, dt=None, persist=True):
     - dt: datetime object (si None, s'usa ara)
     - persist: si True, escriu al fitxer immediatament
     """
+
+    # --- Filtre: ignora els dos primers esdeveniments ---
+    #if len(events) < 2:
+        #return
+    # ----------------------------------------------------
+
     if tipo not in EVENT_TYPES:
         tipo = "Observació"  # fallback
     if dt is None:
         dt = datetime.now()
+
     ev = {"datetime": dt, "type": tipo, "description": description}
+
     with events_lock:
         events.append(ev)
+
     if persist:
         try:
             save_event_to_file(ev)
         except Exception as e:
             print("Error desant event:", e)
-    # Si hi ha un treeview d'esdeveniments visible, l'actualitzarem (si existeix)
+
+    # Actualitza la vista si existeix
     try:
         if 'events_treeview' in globals():
-            # refrescar vista (filtrada segons criteri actual)
             refresh_events_treeview()
     except Exception:
         pass
+
+    #Scroll automàtic al afegir un event
+    try:
+        if 'events_treeview' in globals():
+            refresh_events_treeview()
+
+            # --- Desplaçar scroll a l'última fila ---
+            children = events_treeview.get_children()
+            if children:
+                events_treeview.see(children[-1])
+    except Exception:
+        pass
+
+
 
     
 # ───────────────────────────────────────────────
@@ -478,6 +530,9 @@ IniciarHTButton.grid(row=0, column=0, padx=5, pady=5, sticky=N + S + E + W)
 
 PararHTButton = Button(button_HT_frame, text="Pausa", bg='#FFB74D', fg="white", font=("Arial", 15), command=stopHT)
 PararHTButton.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
+
+grafiquesButton = Button(button_HT_frame, text="grafiques", bg='#6BD66B', fg="white", font=("Arial", 15), command=switch_orbit)
+grafiquesButton.grid(row=0, column=3, padx=5, pady=5, sticky=N + S + E + W)
 
 CalculArduinoButton = Button(button_HT_frame, text="Calcula la mitjana al satèl·lit", bg="#FF4D6B", fg="white", font=("Arial", 15), command=MitjanesArduinoTkinterFriendly)
 CalculArduinoButton.grid(row=6, column=0, padx=10, pady=5, sticky=N + S + E + W)
@@ -548,10 +603,10 @@ button_dist_frame.rowconfigure(1, weight=1)
 button_dist_frame.columnconfigure(0, weight=1)
 button_dist_frame.columnconfigure(1, weight=1)
 
-Iniciar_distButton = Button(button_dist_frame, text="Play", bg='#6BD66B', fg="white", font=("Arial", 15), command=Send_Ordres("seguir", "radar"))
+Iniciar_distButton = Button(button_dist_frame, text="Play", bg='#6BD66B', fg="white", font=("Arial", 15), command=radar_play)
 Iniciar_distButton.grid(row=0, column=0, padx=5, pady=5, sticky=N + S + E + W)
 
-Parar_distButton = Button(button_dist_frame, text="Pausa", bg='#FFB74D', fg="white", font=("Arial", 15), command=Send_Ordres("stop", "radar"))
+Parar_distButton = Button(button_dist_frame, text="Pausa", bg='#FFB74D', fg="white", font=("Arial", 15), command=radar_stop)
 Parar_distButton.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
 
 #----------------FRAME CONTROLADOR DE PERIODE DISTÀNCIA----------------
@@ -562,7 +617,7 @@ periode_dist_frame.rowconfigure(0, weight=1)
 periode_dist_frame.columnconfigure(0, weight=1)
 periode_dist_frame.columnconfigure(1, weight=1)
 
-Aplicar_distButton = Button(periode_dist_frame, text="Aplicar", bg='#4DA3FF', fg="white", font=("Arial", 15), command=canvi_periode_dist)
+Aplicar_distButton = Button(periode_dist_frame, text="Aplicar", bg='#4DA3FF', fg="white", font=("Arial", 15), command=canvi_periodedist)
 Aplicar_distButton.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
 
 frase_distEntry = Entry(periode_dist_frame, font=("Arial", 15))
@@ -638,7 +693,7 @@ def on_add_observation():
         return
     add_event("Observació", text)
     obs_entry.delete(0, END)
-    messagebox.showinfo("OK", "Observació afegida i guardada.")
+    #messagebox.showinfo("OK", "Observació afegida i guardada.")
 
 add_obs_btn = Button(events_frame, text="Afegeix observació", command=on_add_observation, bg="#4DA3FF", fg="white", font=("Arial", 12))
 add_obs_btn.grid(row=0, column=2, padx=5, pady=3, sticky="e")
@@ -726,6 +781,16 @@ clear_filter_btn.grid(row=3, column=2, sticky="w", padx=5, pady=3)
 # Carregar events guardats i pintar-los
 load_events_from_file()
 refresh_events_treeview()
+
+'''''''''''
+#Detectar qualsevol click
+def log_ui_click(event):
+    widget = event.widget
+    name = str(widget)
+    add_event("Comanda", f"Click a {name}")
+
+window.bind_all("<Button-1>", log_ui_click)
+'''''''''
 
 # ────────────────── FRAME MANUAL D’ORDRES ──────────────────
 manual_cmd_frame = LabelFrame(window, text='Enviar comanda manual', font=("Arial", 15))
@@ -820,9 +885,6 @@ axH.set_ylim(0, 100)
 canvas = FigureCanvasTkAgg(fig, master=grafHT_frame)
 canvas.get_tk_widget().grid(row=0, column=0, padx=5, pady=5, sticky=N+S+E+W)
 canvas.draw()
-# Inserir gràfica HT a Tkinter 
-
-
 
 
 #-------------Grafica Radar-------------
@@ -840,7 +902,7 @@ canvasRadar = FigureCanvasTkAgg(figdist, master=graf_dist_frame)
 canvasRadar.get_tk_widget().grid(row=0, column=0, sticky="nsew")
 canvasRadar.draw()
 
-#-------------Grafica Simulació de l'òrbita-------------
+#-------------Grafica Simulació de l'òrbita 2D-------------
 def draw_earth_slice(z):
     if abs(z) <= R_EARTH:
         slice_radius = (R_EARTH**2 - z**2)**0.5
@@ -853,6 +915,8 @@ def draw_earth_slice(z):
 earth_slice = draw_earth_slice(0)
 ax_orbita.add_artist(earth_slice)
 
+
+#-------------Grafica Simulació de l'òrbita 3D-------------
 
 # ───────────────────────────────────────────────
 # FIL DE RECEPCIÓ DE DADES
@@ -1146,9 +1210,9 @@ def actualitzar_grafica_radar():
 
 
 
-# ───────────────────────────────────────────────────────────
-# FUNCIÓ PER ACTUALITZAR LA GRÀFICA DE SIMULACIÓ DE L'ÒRBITA
-# ───────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────
+# FUNCIÓ PER ACTUALITZAR LA GRÀFICA DE SIMULACIÓ DE L'ÒRBITA 2D
+# ───────────────────────────────────────────────────────────────
 
 def actualitzar_grafica_orbita():
     try:
@@ -1189,6 +1253,10 @@ def actualitzar_grafica_orbita():
     except Exception as e:
         print("ERROR a actualitzar_grafica_orbita:", e)
 
+
+# ───────────────────────────────────────────────────────────────
+# FUNCIÓ PER ACTUALITZAR LA GRÀFICA DE SIMULACIÓ DE L'ÒRBITA 3D
+# ───────────────────────────────────────────────────────────────
 
 
 # ───────────────────────────────────────────────
