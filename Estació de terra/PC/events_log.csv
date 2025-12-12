@@ -1,0 +1,117 @@
+datetime,type,description
+2025-12-12 11:27:06,Comanda,Enviada ordre: seguir -> radar
+2025-12-12 11:27:06,Comanda,Enviada ordre: stop -> radar
+2025-12-12 11:27:08,Alarma,Codi 3: Perduda Conexió
+2025-12-12 11:27:09,Alarma,Codi 3: Perduda Conexió
+2025-12-12 11:27:11,Alarma,Codi 3: Perduda Conexió
+2025-12-12 11:27:13,Alarma,Codi 3: Perduda Conexió
+2025-12-12 11:27:15,Alarma,Codi 3: Perduda Conexió
+2025-12-12 11:27:16,Alarma,Codi 3: Perduda Conexió
+2025-12-12 11:27:18,Alarma,Codi 3: Perduda Conexió
+2025-12-12 11:27:20,Alarma,Codi 3: Perduda Conexió
+2025-12-12 11:27:21,Alarma,Codi 3: Perduda Conexió
+2025-12-12 11:27:23,Alarma,Codi 3: Perduda Conexió
+2025-12-12 11:27:25,Alarma,Codi 3: Perduda Conexió
+2025-12-12 11:30:05,Comanda,Enviada ordre: seguir -> radar
+2025-12-12 11:30:05,Comanda,Enviada ordre: stop -> radar
+2025-12-12 11:30:05,Alarma,Codi 3: Perduda Conexió
+2025-12-12 11:30:05,Alarma,Codi 3: Perduda Conexió
+2025-12-12 11:30:05,Alarma,Codi 3: Perduda Conexió
+2025-12-12 11:30:05,Alarma,Codi 3: Perduda Conexió
+2025-12-12 11:30:08,Alarma,Codi 3: Perduda Conexió
+2025-12-12 11:30:09,Alarma,Codi 3: Perduda Conexió
+2025-12-12 11:46:42,Comanda,Enviada ordre: seguir -> radar
+2025-12-12 11:46:42,Comanda,Enviada ordre: stop -> radar
+2025-12-12 11:53:49,Comanda,Enviada ordre: seguir -> radar
+2025-12-12 11:53:49,Comanda,Enviada ordre: stop -> radar
+2025-12-12 11:53:50,Alarma,Codi 3: Perduda Conexió
+2025-12-12 11:53:50,Alarma,Codi 3: Perduda Conexió
+2025-12-12 12:01:46,Comanda,Enviada ordre: seguir -> radar
+2025-12-12 12:01:46,Comanda,Enviada ordre: stop -> radar
+2025-12-12 12:02:34,Comanda,Enviada ordre: seguir -> radar
+2025-12-12 12:22:10,Comanda,Enviada ordre: seguir -> radar
+2025-12-12 12:22:10,Comanda,Enviada ordre: stop -> radar
+2025-12-12 12:22:11,Alarma,Codi 3: Perduda Conexió
+2025-12-12 12:22:11,Alarma,Codi 3: Perduda Conexió
+2025-12-12 12:25:25,Comanda,Enviada ordre: seguir -> radar
+2025-12-12 12:25:25,Comanda,Enviada ordre: stop -> radar
+2025-12-12 12:25:26,Alarma,Codi 3: Perduda Conexió
+2025-12-12 12:25:26,Alarma,Codi 3: Perduda Conexió
+2025-12-12 12:36:51,Comanda,Enviada ordre: seguir -> radar
+2025-12-12 12:36:51,Comanda,Enviada ordre: stop -> radar
+2025-12-12 12:36:52,Alarma,Codi 3: Perduda Conexió
+2025-12-12 12:41:34,Comanda,Enviada ordre: seguir -> radar
+2025-12-12 12:41:34,Comanda,Enviada ordre: stop -> radar
+2025-12-12 12:41:50,Alarma,Codi 3: Perduda Conexió
+2025-12-12 12:42:38,Comanda,Enviada ordre: seguir -> radar
+2025-12-12 12:42:38,Comanda,Enviada ordre: stop -> radar
+2025-12-12 12:42:47,Alarma,Codi 4: Error de sintaxi
+2025-12-12 12:43:07,Alarma,Codi 4: Error de sintaxi
+2025-12-12 12:45:16,Comanda,Enviada ordre: seguir -> radar
+2025-12-12 12:45:16,Comanda,Enviada ordre: stop -> radar
+2025-12-12 12:45:22,Alarma,Codi 4: Error de sintaxi
+2025-12-12 12:52:12,Comanda,Enviada ordre: seguir -> radar
+2025-12-12 12:52:12,Comanda,Enviada ordre: stop -> radar
+2025-12-12 12:52:13,Alarma,Codi 3: Perduda Conexió
+2025-12-12 12:52:13,Alarma,Codi 3: Perduda Conexió
+2025-12-12 12:52:41,Alarma,Codi 3: Perduda Conexió
+2025-12-12 13:13:41,Alarma,Codi 4: Error de sintaxi
+2025-12-12 13:13:45,Alarma,Codi 4: Error de sintaxi
+2025-12-12 13:13:49,Alarma,Codi 4: Error de sintaxi
+2025-12-12 13:13:59,Alarma,Codi 4: Error de sintaxi
+2025-12-12 13:14:24,Alarma,Codi 4: Error de sintaxi
+2025-12-12 13:14:25,Alarma,Codi 4: Error de sintaxi
+2025-12-12 13:14:26,Alarma,Codi 4: Error de sintaxi
+2025-12-12 13:14:26,Alarma,Codi 4: Error de sintaxi
+2025-12-12 13:14:26,Alarma,Codi 4: Error de sintaxi
+2025-12-12 13:14:31,Comanda,Enviada ordre: seguir -> temp
+2025-12-12 13:14:31,Comanda,Enviada ordre: seguir -> hum
+2025-12-12 13:14:59,Comanda,Enviada ordre: seguir -> temp
+2025-12-12 13:14:59,Comanda,Enviada ordre: seguir -> hum
+2025-12-12 13:15:00,Comanda,Enviada ordre: seguir -> temp
+2025-12-12 13:15:00,Comanda,Enviada ordre: seguir -> hum
+2025-12-12 13:15:00,Comanda,Enviada ordre: seguir -> temp
+2025-12-12 13:15:00,Comanda,Enviada ordre: seguir -> hum
+2025-12-12 13:15:03,Comanda,Enviada ordre: seguir -> temp
+2025-12-12 13:15:03,Comanda,Enviada ordre: seguir -> hum
+2025-12-12 13:15:24,Comanda,Enviada ordre: seguir -> temp
+2025-12-12 13:15:24,Comanda,Enviada ordre: seguir -> hum
+2025-12-12 13:15:25,Comanda,Enviada ordre: seguir -> temp
+2025-12-12 13:15:25,Comanda,Enviada ordre: seguir -> hum
+2025-12-12 13:15:53,Comanda,Enviada ordre: seguir -> temp
+2025-12-12 13:15:53,Comanda,Enviada ordre: seguir -> hum
+2025-12-12 13:16:49,Comanda,Enviada ordre: seguir -> temp
+2025-12-12 13:16:49,Comanda,Enviada ordre: seguir -> hum
+2025-12-12 13:16:59,Comanda,Enviada ordre: seguir -> temp
+2025-12-12 13:16:59,Comanda,Enviada ordre: seguir -> hum
+2025-12-12 13:17:02,Alarma,Codi 4: Error de sintaxi
+2025-12-12 13:19:48,Comanda,Enviada ordre: seguir -> radar
+2025-12-12 13:19:48,Comanda,Enviada ordre: stop -> radar
+2025-12-12 13:19:49,Alarma,Codi 3: Perduda Conexió
+2025-12-12 13:19:49,Alarma,Codi 3: Perduda Conexió
+2025-12-12 13:19:49,Alarma,Codi 3: Perduda Conexió
+2025-12-12 13:20:09,Comanda,Enviada ordre: seguir -> radar
+2025-12-12 13:20:09,Comanda,Enviada ordre: stop -> radar
+2025-12-12 13:20:37,Alarma,Codi 4: Error de sintaxi
+2025-12-12 13:20:40,Alarma,Codi 4: Error de sintaxi
+2025-12-12 13:23:09,Comanda,Enviada ordre: seguir -> radar
+2025-12-12 13:23:09,Comanda,Enviada ordre: stop -> radar
+2025-12-12 13:23:50,Comanda,Enviada ordre: seguir -> radar
+2025-12-12 13:23:50,Comanda,Enviada ordre: stop -> radar
+2025-12-12 13:24:10,Comanda,Enviada ordre: seguir -> radar
+2025-12-12 13:24:10,Comanda,Enviada ordre: stop -> radar
+2025-12-12 13:27:31,Comanda,Enviada ordre: seguir -> radar
+2025-12-12 13:27:31,Comanda,Enviada ordre: stop -> radar
+2025-12-12 13:27:33,Alarma,Codi 3: Perduda Conexió
+2025-12-12 13:30:33,Comanda,Enviada ordre: seguir -> radar
+2025-12-12 13:30:33,Comanda,Enviada ordre: stop -> radar
+2025-12-12 13:30:34,Alarma,Codi 3: Perduda Conexió
+2025-12-12 13:30:34,Alarma,Codi 3: Perduda Conexió
+2025-12-12 13:32:57,Comanda,Enviada ordre: seguir -> radar
+2025-12-12 13:32:57,Comanda,Enviada ordre: stop -> radar
+2025-12-12 13:37:43,Comanda,Enviada ordre: seguir -> radar
+2025-12-12 13:37:43,Comanda,Enviada ordre: stop -> radar
+2025-12-12 13:44:58,Comanda,Enviada ordre: seguir -> radar
+2025-12-12 13:44:58,Comanda,Enviada ordre: stop -> radar
+2025-12-12 13:44:59,Alarma,Codi 3: Perduda Conexió
+2025-12-12 13:44:59,Alarma,Codi 3: Perduda Conexió

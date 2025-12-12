@@ -23,7 +23,7 @@ unsigned long tiempoAlarma = 5000;
 long UltimaLectura[3] = {0, 0, 0};      // Temp, Hum, Dist
 int Alarmes[3] = {0, 0, 0};             //Temp Hum Dist
 int EstatFuncionamentSistemes[6] = {1, 1, 1, 1, 1, 0}; 
-int PeriodeEmisioDelsSistemes[4] = {500, 500, 500, 1500};
+int PeriodeEmisioDelsSistemes[4] = {500, 500, 500, 2000}; //Temp hum dist obs
 
 unsigned long NextMillis[4] = {0, 0, 0, 0};
 int NumeroValorsMitjanes[3] = {1, 1, 1};
@@ -136,7 +136,7 @@ float mitjanaHum() {
 
 int CheckSum(String missatge) {
   int llargada = missatge.length();
-  int sum = 0 // 10; //Comença des de 10 pq en ascii 10 = '\n' <- Com que a la recepció agafem tot el missatge fins al chechsum, el salt de línea no el interpretem
+  int sum = 0;// 10; //Comença des de 10 pq en ascii 10 = '\n' <- Com que a la recepció agafem tot el missatge fins al chechsum, el salt de línea no el interpretem
 
   for (int i = 0; i<llargada ; i++){
     sum =sum + int(missatge.charAt(i));
@@ -153,11 +153,15 @@ float GetTemp() {
     float t = dht.readTemperature();
     NextMillis[0] = millis() + PeriodeEmisioDelsSistemes[0];
 
-    if (isnan(t)) return -1;
+    if (isnan(t)){
+      Alarmes[0] = 1;
+      return 0;
+      }
 
-    Alarmes[0] = 0;
-    UltimaLectura[0] = millis();
-    return t;
+    else{
+      UltimaLectura[0] = millis();
+      return t;
+      }
   }
   return 0;
 }
@@ -168,13 +172,18 @@ float GetHum() {
     float h = dht.readHumidity();
     NextMillis[1] = millis() + PeriodeEmisioDelsSistemes[1];
 
-    if (isnan(h)) return -1;
+    if (isnan(h)){
+      Alarmes[1] = 1;
+      return 0;
+      }
 
-    Alarmes[1] = 0;
-    UltimaLectura[1] = millis();
-    return h;
-  }
+    else{
+      UltimaLectura[1] = millis();
+      return h;
+      }
+
   return 0;
+  }
 }
 
 int GetDist() {
@@ -190,8 +199,15 @@ int GetDist() {
     NextMillis[2] = millis() + PeriodeEmisioDelsSistemes[2];
 
     int distCm = duration / 58;
-    Alarmes[2] = 0;
-    UltimaLectura[2] = millis();
+
+    if (distCm != 0){
+      Alarmes[2] = 0;
+      UltimaLectura[2] = millis();
+
+    } else {
+      Alarmes[2] = 1;
+    }
+
     return distCm;
   }
   return 0;
@@ -234,15 +250,6 @@ void simulate_orbit(unsigned long millisTime, double inclination, int ecef) {
     RetornSymOrbit[2] = y;
     RetornSymOrbit[3] = z;
 
-    Serial.print("Orbit | t=");
-    Serial.print(time);
-    Serial.print("s  X=");
-    Serial.print(x);
-    Serial.print("  Y=");
-    Serial.print(y);
-    Serial.print("  Z=");
-    Serial.println(z);
-
 }
 
 
@@ -262,7 +269,7 @@ void SendObservacions() {
       updateBuffers(temp, hum);
   }
 
-  Serial.println("SendObs");
+  //Serial.println("SendObs");
   simulate_orbit(millis(),0,0);
 
   missatge += "0;" ;
@@ -294,23 +301,7 @@ void SendObservacions() {
   missatge += ";";
 
   missatge = missatge + CheckSum(missatge);
-  /*
-  mySerial.print(hum); 
-  mySerial.print(":");
-  mySerial.print(temp);
-  mySerial.print(":");
-  mySerial.print(pos); 
-  mySerial.print(":");
-  mySerial.print(dist2);
-  mySerial.print(":");
-  mySerial.print(mitjanaHum());
-  mySerial.print(":");
-  mySerial.print(mitjanaTemp());
-  mySerial.print(":");
 
-  //dades de la òrbita
-  simulate_orbit(millis(),0,0);
-  */
   Serial.println(missatge);
   mySerial.println(missatge);
 
@@ -334,9 +325,68 @@ void GetInfo() {
   data = mySerial.readStringUntil('\n');
   data.trim();
 
-  Serial.print("Rebut: ");
+  
+  //Serial.print("Rebut: ");
   Serial.println(data);
 
+  
+  //PARSING
+  int i = 0; //Acció Arguments (Id_Sys / Info) Valor
+  int UltimIndexSeparador = 0;
+  int IndexSeparador;
+
+  while (i<4 || IndexSeparador != -1){
+    IndexSeparador = data.indexOf(";");
+    i++;
+
+    if (IndexSeparador != -1){
+      ElementsUltimMissatge[i] = data.substring(UltimIndexSeparador, IndexSeparador).toInt();
+      UltimIndexSeparador = IndexSeparador+1;
+    i++;
+    }
+  }
+  //Crida de funcions relacionades amb la rebuda de dades
+  //ORDRES
+  int Accio = ElementsUltimMissatge[0];
+  Serial.println(Accio);
+  int Argument = ElementsUltimMissatge[1];
+  Serial.println(Argument);
+
+  if (Accio == "2"){ //Acció ->ORDRE
+    if (Argument == 0){ //Argument -> Stop
+      EstatFuncionamentSistemes[ElementsUltimMissatge[2]] = 0;
+
+    } else if (Argument == "2"){ //Argument -> Seguir
+      EstatFuncionamentSistemes[ElementsUltimMissatge[2]] = 1;
+
+    } else if (Argument == "3"){ //Argument -> Canvi de freq
+      PeriodeEmisioDelsSistemes[ElementsUltimMissatge[2]] = ElementsUltimMissatge[3];
+    }
+  }
+  //RADAR
+  if (Accio == "3"){
+
+    if (Argument == "0"){
+      llargadaSteps == ElementsUltimMissatge[2];
+      //Realment canviem la llargada del cada desplaçament, és així pq la velocitat real del motor ja és la maxima de per si per tal de que no es cali
+      
+    }else if (Argument == "1"){
+      //CODI LOCK
+    } else if (Argument == "2"){
+      pos = ElementsUltimMissatge[2];
+
+    }
+
+    }
+  //MITJANES
+  if (ElementsUltimMissatge[0] == "4"){
+    NumeroValorsMitjanes[ElementsUltimMissatge[1]] = ElementsUltimMissatge[2];
+  }
+  Serial.print(data);
+
+}
+
+/*
   for (int i = 0; i < 4; i++) ElementsUltimMissatge[i] = 0;
 
   int idx = 0;
@@ -361,7 +411,13 @@ void GetInfo() {
   if (accio == 2) {
     if (argument == 0)   EstatFuncionamentSistemes[valor1] = 0;
     if (argument == 2)   EstatFuncionamentSistemes[valor1] = 1;
-    if (argument == 3)   PeriodeEmisioDelsSistemes[valor1] = valor2;
+    if (argument == 3){
+      PeriodeEmisioDelsSistemes[valor1] = valor2;
+      Serial.print("Periode emisió ");
+      Serial.print(valor1);
+      Serial.print(" establert a ");
+      Serial.print(valor2);
+    }
   }
 
   if (accio == 3) {
@@ -377,7 +433,7 @@ void GetInfo() {
       EstatFuncionamentSistemes[5] = 0;
     }
   }
-}
+  */
 
 // ===============================================================
 // LOOP PRINCIPAL
@@ -387,13 +443,6 @@ void loop() {
   MoureMotor();
   GetInfo();
 
-  // ======= ACTUALITZAR SIMULACIÓ ORBITA =======
-  /*
-  if (millis() >= nextOrbitUpdate) {
-    simulate_orbit(millis(), 0.1, 1);  // inclinació 0.1 rad, ECEF = true
-    nextOrbitUpdate = millis() + MILLIS_BETWEEN_UPDATES;
-  }
-  */
 
   if (millis() >= NextMillis[3]){
     SendObservacions();
