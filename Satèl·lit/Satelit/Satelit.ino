@@ -23,12 +23,12 @@ unsigned long tiempoAlarma = 5000;
 long UltimaLectura[3] = {0, 0, 0};      // Temp, Hum, Dist
 int Alarmes[3] = {0, 0, 0};             //Temp Hum Dist
 int EstatFuncionamentSistemes[6] = {1, 1, 1, 1, 1, 0}; 
-int PeriodeEmisioDelsSistemes[4] = {500, 500, 500, 2000}; //Temp hum dist obs
+int PeriodeEmisioDelsSistemes[5] = {500, 500, 500, 500, 2000}; //Temp hum radar alarmes  all
 
-unsigned long NextMillis[4] = {0, 0, 0, 0};
+unsigned long NextMillis[5] = {0, 0, 0, 0, 0}; //Temp hum radar alarmes escombreig all
 int NumeroValorsMitjanes[3] = {1, 1, 1};
 
-int ElementsUltimMissatge[4] = {0, 0, 0, 0};
+int ElementsUltimMissatge[5] = {0, 0, 0, 0, 0}; //Accio Arg V1 V2 Checksum
 
 // ----- Motor pas a pas -----
 #define OUTPUT1   7   
@@ -78,7 +78,7 @@ void setup() {
 
   dht.begin();
 
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 5; i++) {
     NextMillis[i] = millis() + PeriodeEmisioDelsSistemes[i];
   }
 
@@ -302,7 +302,8 @@ void SendObservacions() {
 
   missatge = missatge + CheckSum(missatge);
 
-  Serial.println(missatge);
+  //Serial.println(missatge);
+  Serial.println("SendObs");
   mySerial.println(missatge);
 
 
@@ -311,8 +312,13 @@ void SendObservacions() {
 
 void SendAlarm(int argument) {
   if (argument >= 0 && argument <= 2) {
-    mySerial.print("1;");
-    mySerial.println(argument);
+    String missatge; 
+    missatge += "1;";
+    missatge.concat(argument);
+    missatge += ";";
+    missatge = missatge + CheckSum(missatge);
+
+    mySerial.println(missatge);
   }
 }
 
@@ -320,11 +326,12 @@ void SendAlarm(int argument) {
 // PARSING DE MISSATGES
 // ===============================================================
 void GetInfo() {
-  if (!mySerial.available()) return;
+  if (!mySerial.available()) 
+    return;
 
-  data = mySerial.readStringUntil('\n');
+  String data = mySerial.readStringUntil('\n');
   data.trim();
-
+  mySerial.flush();
   
   //Serial.print("Rebut: ");
   Serial.println(data);
@@ -333,46 +340,64 @@ void GetInfo() {
   //PARSING
   int i = 0; //Acció Arguments (Id_Sys / Info) Valor
   int UltimIndexSeparador = 0;
-  int IndexSeparador;
+  int IndexSeparador = 0;
 
-  while (i<4 || IndexSeparador != -1){
-    IndexSeparador = data.indexOf(";");
-    i++;
-
+  while ((i<4) && (IndexSeparador != -1)){
+    IndexSeparador = data.indexOf(";",UltimIndexSeparador);
+    
+    //Serial.println(i);
+    Serial.println(IndexSeparador);
     if (IndexSeparador != -1){
       ElementsUltimMissatge[i] = data.substring(UltimIndexSeparador, IndexSeparador).toInt();
       UltimIndexSeparador = IndexSeparador+1;
+
+
     i++;
+    }
+    else if(IndexSeparador == -1)
+    {
+      ElementsUltimMissatge[i] = data.substring(UltimIndexSeparador,  data.length() ).toInt();
+      Serial.println("Fi string");
     }
   }
   //Crida de funcions relacionades amb la rebuda de dades
   //ORDRES
+  Serial.println("Fi parsing");
+
   int Accio = ElementsUltimMissatge[0];
+  Serial.print("Accio: ");
   Serial.println(Accio);
+
   int Argument = ElementsUltimMissatge[1];
+  Serial.print("Argument: ");
   Serial.println(Argument);
 
-  if (Accio == "2"){ //Acció ->ORDRE
+  if (Accio == 2){ //Acció ->ORDRE
+    Serial.println("Executant Acció");
     if (Argument == 0){ //Argument -> Stop
       EstatFuncionamentSistemes[ElementsUltimMissatge[2]] = 0;
+      Serial.println("Stop");
 
-    } else if (Argument == "2"){ //Argument -> Seguir
+    } else if (Argument == 1){ //Argument -> Seguir
       EstatFuncionamentSistemes[ElementsUltimMissatge[2]] = 1;
+      Serial.println("Seguir");
 
-    } else if (Argument == "3"){ //Argument -> Canvi de freq
+    } else if (Argument == 2){ //Argument -> Canvi de freq
       PeriodeEmisioDelsSistemes[ElementsUltimMissatge[2]] = ElementsUltimMissatge[3];
+      Serial.print("Canviant frequencia a: ");
+      Serial.println(ElementsUltimMissatge[3]);
     }
   }
   //RADAR
-  if (Accio == "3"){
+  if (Accio == 3){
 
-    if (Argument == "0"){
+    if (Argument == 0){
       llargadaSteps == ElementsUltimMissatge[2];
       //Realment canviem la llargada del cada desplaçament, és així pq la velocitat real del motor ja és la maxima de per si per tal de que no es cali
       
-    }else if (Argument == "1"){
+    }else if (Argument == 1){
       //CODI LOCK
-    } else if (Argument == "2"){
+    } else if (Argument == 2){
       pos = ElementsUltimMissatge[2];
 
     }
@@ -443,10 +468,9 @@ void loop() {
   MoureMotor();
   GetInfo();
 
-
-  if (millis() >= NextMillis[3]){
+  if (millis() >= NextMillis[4]){ //index 4 = all sistemes
     SendObservacions();
-    NextMillis[3] = millis() + PeriodeEmisioDelsSistemes[3];
+    NextMillis[4] = millis() + PeriodeEmisioDelsSistemes[4];
   }
 
 

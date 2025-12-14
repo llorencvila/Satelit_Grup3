@@ -1,0 +1,132 @@
+datetime,type,description
+2025-12-14 14:58:22,Comanda,Enviada ordre: seguir -> temp
+2025-12-14 14:58:22,Comanda,Enviada ordre: seguir -> hum
+2025-12-14 15:00:11,Comanda,Enviada ordre: seguir -> temp
+2025-12-14 15:00:11,Comanda,Enviada ordre: seguir -> hum
+2025-12-14 15:01:50,Comanda,Enviada ordre: seguir -> temp
+2025-12-14 15:01:50,Comanda,Enviada ordre: seguir -> hum
+2025-12-14 15:02:16,Comanda,Enviada ordre: seguir -> temp
+2025-12-14 15:02:16,Comanda,Enviada ordre: seguir -> hum
+2025-12-14 15:02:55,Comanda,Enviada ordre: seguir -> temp
+2025-12-14 15:02:55,Comanda,Enviada ordre: seguir -> hum
+2025-12-14 15:03:01,Comanda,Enviada ordre: stop -> temp
+2025-12-14 15:03:01,Comanda,Enviada ordre: stop -> hum
+2025-12-14 15:03:42,Comanda,Enviada ordre: seguir -> temp
+2025-12-14 15:03:42,Comanda,Enviada ordre: seguir -> hum
+2025-12-14 15:15:10,Alarma,Codi 3: Perduda Conexió
+2025-12-14 15:15:10,Alarma,Codi 3: Perduda Conexió
+2025-12-14 15:15:10,Alarma,Codi 3: Perduda Conexió
+2025-12-14 15:17:47,Alarma,Codi 3: Perduda Conexió
+2025-12-14 15:50:39,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:06:17,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:06:17,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:06:17,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:06:17,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:06:51,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:10:24,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:10:24,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:10:29,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:10:29,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:10:34,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:10:34,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:10:39,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:10:44,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:10:44,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:10:49,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:10:55,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:00,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:00,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:05,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:05,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:10,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:10,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:15,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:15,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:20,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:25,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:26,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:31,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:31,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:36,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:41,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:46,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:51,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:56,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:12:01,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:12:07,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:12:58,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:13:57,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:18:36,Alarma,Codi 2: Distancia
+2025-12-14 16:18:58,Alarma,Codi 4: Error de sintaxi
+2025-12-14 16:19:02,Alarma,Codi 4: Error de sintaxi
+2025-12-14 16:19:12,Alarma,Codi 2: Distancia
+2025-12-14 16:19:18,Alarma,Codi 2: Distancia
+2025-12-14 16:19:23,Alarma,Codi 2: Distancia
+2025-12-14 16:19:28,Alarma,Codi 2: Distancia
+2025-12-14 16:19:33,Alarma,Codi 2: Distancia
+2025-12-14 16:19:49,Alarma,Codi 4: Error de sintaxi
+2025-12-14 16:20:14,Alarma,Codi 2: Distancia
+2025-12-14 16:20:19,Alarma,Codi 2: Distancia
+2025-12-14 16:21:05,Alarma,Codi 2: Distancia
+2025-12-14 16:21:31,Alarma,Codi 2: Distancia
+2025-12-14 16:23:40,Alarma,Codi 2: Distancia
+2025-12-14 16:24:57,Alarma,Codi 2: Distancia
+2025-12-14 16:26:11,Alarma,Codi 4: Error de sintaxi
+2025-12-14 16:26:15,Alarma,Codi 4: Error de sintaxi
+2025-12-14 16:26:37,Alarma,Codi 4: Error de sintaxi
+2025-12-14 16:26:40,Alarma,Codi 2: Distancia
+2025-12-14 16:26:45,Alarma,Codi 2: Distancia
+2025-12-14 16:26:50,Alarma,Codi 2: Distancia
+2025-12-14 16:26:55,Alarma,Codi 2: Distancia
+2025-12-14 16:27:00,Alarma,Codi 2: Distancia
+2025-12-14 16:27:05,Alarma,Codi 2: Distancia
+2025-12-14 16:27:31,Alarma,Codi 4: Error de sintaxi
+2025-12-14 16:28:22,Alarma,Codi 2: Distancia
+2025-12-14 16:28:33,Alarma,Codi 2: Distancia
+2025-12-14 16:28:38,Alarma,Codi 2: Distancia
+2025-12-14 16:28:43,Alarma,Codi 2: Distancia
+2025-12-14 16:28:48,Alarma,Codi 2: Distancia
+2025-12-14 16:28:58,Alarma,Codi 2: Distancia
+2025-12-14 16:29:04,Alarma,Codi 2: Distancia
+2025-12-14 16:29:34,Alarma,Codi 2: Distancia
+2025-12-14 16:29:40,Alarma,Codi 2: Distancia
+2025-12-14 16:29:45,Alarma,Codi 2: Distancia
+2025-12-14 16:29:50,Alarma,Codi 2: Distancia
+2025-12-14 16:30:00,Alarma,Codi 2: Distancia
+2025-12-14 16:31:53,Alarma,Codi 2: Distancia
+2025-12-14 16:31:58,Alarma,Codi 4: Error de sintaxi
+2025-12-14 16:31:58,Alarma,Codi 2: Distancia
+2025-12-14 16:32:04,Alarma,Codi 2: Distancia
+2025-12-14 16:32:09,Alarma,Codi 2: Distancia
+2025-12-14 16:32:14,Alarma,Codi 2: Distancia
+2025-12-14 16:32:15,Alarma,Codi 4: Error de sintaxi
+2025-12-14 16:32:17,Alarma,Codi 4: Error de sintaxi
+2025-12-14 16:32:19,Alarma,Codi 2: Distancia
+2025-12-14 16:32:24,Alarma,Codi 2: Distancia
+2025-12-14 16:32:29,Alarma,Codi 2: Distancia
+2025-12-14 16:32:34,Alarma,Codi 2: Distancia
+2025-12-14 16:32:40,Alarma,Codi 2: Distancia
+2025-12-14 16:32:45,Alarma,Codi 2: Distancia
+2025-12-14 16:32:50,Alarma,Codi 2: Distancia
+2025-12-14 16:33:00,Alarma,Codi 2: Distancia
+2025-12-14 16:33:04,Alarma,Codi 4: Error de sintaxi
+2025-12-14 16:33:05,Alarma,Codi 2: Distancia
+2025-12-14 16:33:10,Alarma,Codi 2: Distancia
+2025-12-14 16:34:55,Alarma,Codi 4: Error de sintaxi
+2025-12-14 16:35:31,Comanda,Enviada ordre: stop -> alarmes
+2025-12-14 16:36:59,Comanda,Enviada ordre: stop -> alarmes
+2025-12-14 16:37:01,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:38:38,Comanda,Enviada ordre: stop -> alarmes
+2025-12-14 16:38:40,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:39:19,Comanda,Enviada ordre: stop -> alarmes
+2025-12-14 16:39:21,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:40:06,Comanda,Enviada ordre: stop -> alarmes
+2025-12-14 16:40:46,Comanda,Enviada ordre: stop -> alarmes
+2025-12-14 16:41:57,Comanda,Enviada ordre: stop -> alarmes
+2025-12-14 16:45:28,Comanda,Enviada ordre: stop -> alarmes
+2025-12-14 16:45:30,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:46:12,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:46:13,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:46:13,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:46:27,Comanda,Enviada ordre: stop -> alarmes
+2025-12-14 16:46:29,Alarma,Codi 3: Perduda Conexió
