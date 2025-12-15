@@ -18,14 +18,14 @@ import tkinter as tk
 from matplotlib.animation import FuncAnimation
 from matplotlib.figure import Figure
 
-Debug_RecepcioSimulada = False #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
+Debug_RecepcioSimulada = True #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
                               #És d'utilitat per fer proves amb el codi si no es disposa del maquinari físic (els dos arduinos)
 
 # ───────────────────────────────────────────────
 # CONFIGURACIÓ DEL PORT SÈRIE 
 # ───────────────────────────────────────────────
 if Debug_RecepcioSimulada == False:
-    device = 'COM5'
+    device = 'COM7'
     mySerial = serial.Serial(device, 9600)
     print("funcionant:")
 
@@ -47,12 +47,17 @@ histCoordz = []
 
 mode_orbita = "2D"   # o "3D"
 
+alarm_active = False
+message_open = False  # ← control del messagebox obert
+# Diccionari global per controlar missatges oberts
+alarms_shown = {}  # clau = codi alarma, valor = True si ja s'ha mostrat
+
 contact = []
 parametres = 4
 Llista_Arguments_Ordres = ["stop", "seguir", "freq"]
 llista_Arguments_Radar = ["vel", "lock", "moure", "escombreig"]
 llista_Id_sys = ["temp", "hum", "radar", "alarmes", "all"]
-noms_alarmes = ["Temperatura", "Humitat", "Distancia", "Perduda Conexió", "Error de sintaxi"]
+noms_alarmes = ["Temperatura", "Humitat", "Distancia", "Perduda Conexió", "Error de sintaxi","Temperatura màxima superada","Humitat màxima superada"]
 
 
 R_EARTH = 6371000  # radi de la Terra en metres
@@ -68,6 +73,10 @@ Hmax_val = None
 mySerialOrbit = None
 
 stopCalc = False
+
+update_mitjanaH = False
+update_mitjanaT = False
+
 
 #currentplot = 0  # 0 = 2D, 1 = 3D       variable per variar les gràfiques de les òrbites
 
@@ -92,15 +101,61 @@ print ("Funcionant")
 def temps():
     return time.time() - t0
 
-def Notificació_Alarma(arguments):
-    if arguments < len(noms_alarmes):
-        alarma_text = noms_alarmes[arguments]
 
-        print("alarma:", alarma_text)
-        add_event("Alarma", f"Codi {arguments}: {alarma_text}")
+def Notificació_Alarma(codi):
+    if codi >= len(noms_alarmes):
+        return
 
-        # Important: cridar el Tkinter Toplevel des del MAIN THREAD
-        window.after(0, lambda: messagebox_no_modal("Alarma", alarma_text))
+    alarma_text = noms_alarmes[codi]
+    add_event("Alarma", f"Codi {codi}: {alarma_text}")
+
+    # Si ja s'ha mostrat, no fem res
+    if alarms_shown.get(codi, False):
+        return
+
+    alarms_shown[codi] = True  # marquem que s'ha mostrat
+
+    # Mostrem la finestra al thread principal
+    def show_msg():
+        win = tk.Toplevel()
+        win.title("Alarma!")
+        win.geometry("350x150")
+        win.resizable(False, False)
+        win.attributes("-topmost", True)
+
+        # Centrem la finestra
+        win.update_idletasks()
+        x = (win.winfo_screenwidth() - win.winfo_width()) // 2
+        y = (win.winfo_screenheight() - win.winfo_height()) // 3
+        win.geometry(f"+{x}+{y}")
+
+        tk.Label(
+            win,
+            text=alarma_text,
+            wraplength=300,
+            justify="left",
+            font=("Helvetica", 12, "bold"),
+            fg="red"
+        ).pack(pady=15)
+
+        tk.Button(
+            win,
+            text="OK",
+            command=lambda: close_alarm(win, codi),
+            font=("Helvetica", 14, "bold"),
+            fg="white",
+            bg="red",
+            width=10,
+            height=2
+        ).pack(pady=10)
+
+    window.after(0, show_msg)
+
+def close_alarm(win, codi):
+    """Tanca la finestra i permet que l'alarma es pugui tornar a mostrar"""
+    alarms_shown[codi] = False
+    win.destroy()
+
 
 def validar_numero(entry_widget):
     try:
@@ -110,6 +165,21 @@ def validar_numero(entry_widget):
         Notificació_Alarma(4)
         add_event("Alarma", "Error de sintaxi: valor no numèric")
         return None
+    
+def check_alarm():
+    global alarm_active, message_open
+
+    # Aquí poses la teva condició real
+    alarm_condition = True  # Exemple
+
+    if alarm_condition and not message_open:
+        message_open = True
+        # Mostrem el messagebox en un petit thread o directament, bloquejant
+        #messagebox.showwarning("Alarma!", "S'ha activat l'alarma!")
+        message_open = False  # quan es tanca el messagebox es torna a posar a False
+
+    # Tornem a cridar la funció després d'un temps
+    window.after(500, check_alarm)  # 500 ms, ajustable
 
 # ───────────────────────────────────────────────
 # BOTÓ PER CANVIAR ENTRE GRÀFIQUES
@@ -134,38 +204,6 @@ def canviar_grafica_orbita():
         canvas_orbita.get_tk_widget().grid(row=0, column=0, padx=5, pady=5, sticky=N+S+E+W, rowspan = 1)
 
         mode_orbita = "2D"
-
-
-
-# ─────────────────────────────────────────────────────
-# FUNCIÓ MESSAGEBOX QUE NO CONGELI TOT EL PROGRAMA
-# ─────────────────────────────────────────────────────
-
-def messagebox_no_modal(titol, text):
-    win = tk.Toplevel()
-    win.title(titol)
-    win.geometry("350x150")
-    win.resizable(False, False)
-    win.attributes("-topmost", True)
-
-    # Centra la finestra
-    win.update_idletasks()
-    x = (win.winfo_screenwidth() - win.winfo_width()) // 2
-    y = (win.winfo_screenheight() - win.winfo_height()) // 3
-    win.geometry(f"+{x}+{y}")
-
-    tk.Label (win, text=text, wraplength=300, justify="left", font = ("Helvetica",12,"bold"), fg="red").pack(pady=15)
-    tk.Button(
-        win,
-        text="OK",
-        command=win.destroy,
-        font=("Helvetica", 14, "bold"),  # font més gran
-        fg="white",
-        bg="red",
-        width=10,  # amplada del botó en caràcters
-        height=2   # alçada del botó en línies
-    ).pack(pady=10)
-
 
 # ───────────────────────────────────────────────
 # FUNCIONS PER ENVIAR DADES
@@ -198,6 +236,17 @@ def Tmax():
     add_event("Comanda", f"Tmax configurat a {fraseHTEntry_Tmax.get()}")     #registre d'events
     validar_numero(fraseHTEntry_Tmax)       #alarma sino s'ha entroduint un valor correcte
 
+    start_mitjanaT_label(
+    histT,
+    data_lock,
+    parent_widget=button_HT_frame,
+    interval=0.5,
+    row=4,
+    column=0
+    )
+
+
+
 def Hmax():
     global Hmax_val
     try:
@@ -207,10 +256,23 @@ def Hmax():
         print("Error: no has introduït un número.")
     add_event("Comanda", f"Hmax configurat a {fraseHTEntry_Hmax.get()}")     #registre d'events
     validar_numero(fraseHTEntry_Hmax)       #alarma sino s'ha entroduint un valor correcte
-
+    start_mitjanaH_label(
+    histH,
+    data_lock,
+    parent_widget=button_HT_frame,
+    interval=0.5,
+    row=5,
+    column=0
+    )
 
 def activar_mitjanes_EstTerra():
     
+    update_mitjanaH = False
+    label_mitjanaH_arduino.config(text="Mitjana H Satèl·lit: --")  # buida el label
+    update_mitjanaT = False
+    label_mitjanaT_arduino.config(text="Mitjana T Satèl·lit: --")  # buida el label
+
+
     global stopCalc
     stopCalc = False
     mitjanes_EstTerra()
@@ -381,6 +443,8 @@ def Generar_Checksum(missatge):
     return checksum
 
 def MitjanesArduinoTkinterFriendly():
+    update_mitjanaH = True
+    update_mitjanaT = True
     print("mitjana arduino")
     Send_Mitjanes_Arduino("temp",0)
     Send_Mitjanes_Arduino("hum",0)
@@ -404,28 +468,6 @@ def canvi_periodedist():
     add_event("Comanda", f"Canvi període distància a {frase_distEntry.get()}")     #registre d'events
     validar_numero(frase_distEntry)       #alarma sino s'ha entroduint un valor correcte
 
-'''''''''
-def stop_dist(): #Aquesta funció ha migrat a Send_Ordres
-    if Debug_RecepcioSimulada == False:
-        mensaje = "STOP"
-        mySerial.write(mensaje.encode('utf-8'))
-    print("STOP")
-    #mySerial.close
-
-def resume_dist(): #Aquesta funció ha migrat a Send_Ordres
-    if Debug_RecepcioSimulada == False:
-        mensaje = "REANUDAR"
-        mySerial.write(mensaje.encode('utf-8'))
-    print("REANUDAR")
-
-def error_dist(): #Aquesta funció ha migrat a Notificacio_Alarma
-    print("FALLO EN LA TRANSMISSIÓ DE DADES")
-
-def canvi_periode_dist(): ##Aquesta funció ha migrat a Send_Canvi_Frequencia
-    periode_transmisio = "periode" +frase_distEntry.get()
-    mySerial.write(periode_transmisio)
-    print ('Has canviat el periode de transimsio a --- ' + frase_distEntry.get())
-'''''''''
 
 # ───────────────────────────────────────────────
 # FUNCIONS REGISTRE D'EVENTS
@@ -475,13 +517,7 @@ def save_all_events_to_file():
                 writer.writerow([_format_dt(e["datetime"]), e["type"], e["description"]])
 
 def add_event(tipo, description, dt=None, persist=True):
-    """
-    Afegeix un event a la memòria (i opcionalment a fitxer).
-    - tipo: una de EVENT_TYPES
-    - description: text
-    - dt: datetime object (si None, s'usa ara)
-    - persist: si True, escriu al fitxer immediatament
-    """
+
 
     if tipo not in EVENT_TYPES:
         tipo = "Observació"  # fallback
@@ -569,10 +605,10 @@ CalculArduinoButton.grid(row=6, column=0, padx=10, pady=5, sticky=N + S + E + W)
 CalculEstTerraButton = Button(button_HT_frame, text="Calcula la mitjana a l'estació de terra", bg='#FF4D6B', fg="white", font=("Arial", 15), command=activar_mitjanes_EstTerra)
 CalculEstTerraButton.grid(row=6, column=1, padx=10, pady=5, sticky=N + S + E + W)
 
-label_mitjanaT_arduino = Label(button_HT_frame, text="Mitjana T Arduino: --", font=("Arial", 14))
+label_mitjanaT_arduino = Label(button_HT_frame, text="Mitjana T Satèl·lit: --", font=("Arial", 14))
 label_mitjanaT_arduino.grid(row=4, column=1, padx=5, pady=5, sticky=W)
 
-label_mitjanaH_arduino = Label(button_HT_frame, text="Mitjana H Arduino: --", font=("Arial", 14))
+label_mitjanaH_arduino = Label(button_HT_frame, text="Mitjana H Satèl·lit: --", font=("Arial", 14))
 label_mitjanaH_arduino.grid(row=5, column=1, padx=5, pady=5, sticky=W)
 
 label_mitjanaT_ET = Label(button_HT_frame, text="Mitjana T ET: --", font=("Arial", 14))
@@ -740,19 +776,10 @@ filter_type_cb = ttk.Combobox(events_frame, values=["Tots"] + EVENT_TYPES, state
 filter_type_cb.set("Tots")
 filter_type_cb.grid(row=1, column=1, padx=5, pady=3, sticky="we")
 
-#filter_from_label = Label(events_frame, text="Des (YYYY-MM-DD HH:MM:SS):", font=("Arial", 10))
-#filter_from_label.grid(row=1, column=2, padx=5, pady=3, sticky="w")
-#filter_from_entry = Entry(events_frame, font=("Arial", 10))
-#filter_from_entry.grid(row=1, column=2, padx=5, pady=3, sticky="e")  # ajusta si cal
-
-#filter_to_label = Label(events_frame, text="Fins (YYYY-MM-DD HH:MM:SS):", font=("Arial", 10))
-#filter_to_label.grid(row=1, column=2, padx=5, pady=3, sticky="w")
 
 # Per simplificar la disposició, fem dues entrades petites a sota:
 filter_from_entry = Entry(events_frame, font=("Arial", 10))
-#filter_from_entry.grid(row=1, column=1, padx=5, pady=3, sticky="w")
 filter_to_entry = Entry(events_frame, font=("Arial", 10))
-#filter_to_entry.grid(row=1, column=2, padx=5, pady=3, sticky="w")
 
 # 3) Treeview per mostrar events
 cols = ("datetime", "type", "description")
@@ -816,16 +843,6 @@ clear_filter_btn.grid(row=3, column=2, sticky="w", padx=5, pady=3)
 # Carregar events guardats i pintar-los
 load_events_from_file()
 refresh_events_treeview()
-
-'''''''''''
-#Detectar qualsevol click
-def log_ui_click(event):
-    widget = event.widget
-    name = str(widget)
-    add_event("Comanda", f"Click a {name}")
-
-window.bind_all("<Button-1>", log_ui_click)
-'''''''''
 
 # ────────────────── FRAME MANUAL D’ORDRES ──────────────────
 manual_cmd_frame = LabelFrame(window, text='Enviar comanda manual', font=("Arial", 15))
@@ -954,8 +971,6 @@ earth_slice = draw_earth_slice(0)
 ax_orbita.add_artist(earth_slice)
 
 
-#-------------Grafica Simulació de l'òrbita 3D-------------
-
 # ───────────────────────────────────────────────
 # FIL DE RECEPCIÓ DE DADES
 # ───────────────────────────────────────────────
@@ -1028,7 +1043,7 @@ def recepcion():
                             elif accio == "1":
                                 threadNotificacio = threading.Thread(target=Notificació_Alarma(int(data[0])))
                                 threadNotificacio.start()
-                    except IndexError or ValueError:
+                    except IndexError or ValueError or UnboundLocalError:
                         print("Error intern recepció INDEX OUT OF RANGE")
                         Notificació_Alarma(3);    
                 else:
@@ -1141,6 +1156,8 @@ def start_mitjanaT_label(histT, data_lock, parent_widget, interval=0.5, row=None
                                 consec_Tmax += 1
                                 if consec_Tmax == 3:
                                     print("ALERTA: 3 mitjanes consecutives de temperatura superen el límit (detectat per l'estació de terra)")
+                                    Notificació_Alarma(5)
+
                             else:       
                                 consec_Tmax = 0
                                 
@@ -1193,6 +1210,7 @@ def start_mitjanaH_label(histH, data_lock, parent_widget, interval=0.5, row=None
                                 consec_Hmax += 1
                                 if consec_Hmax == 3:
                                     print("ALERTA: 3 mitjanes consecutives d'humitat superen el límit (detectat per l'estació de terra)")
+                                    Notificació_Alarma(6)
                             else:
                                 consec_Hmax = 0
 
@@ -1279,20 +1297,6 @@ def update_orbit2D():
             earth_slice.remove()
             earth_slice = draw_earth_slice(z)
             ax_orbita.add_artist(earth_slice)
-
-            # Ajust de límits si cal
-            '''''
-            x = histCoordx[-1]
-            y = histCoordy[-1]
-            xlim = ax_orbita.get_xlim()
-            ylim = ax_orbita.get_ylim()
-            max_x = max(abs(xlim[0]), abs(xlim[1]), abs(x))
-            max_y = max(abs(ylim[0]), abs(ylim[1]), abs(y))
-            new_lim = max(max_x, max_y) * 1.1
-            ax_orbita.set_xlim(-new_lim, new_lim)
-            ax_orbita.set_ylim(-new_lim, new_lim)
-            '''
-
 
             canvas_orbita.draw_idle()
 
@@ -1430,6 +1434,6 @@ def on_close():
     window.destroy()
 
 
-
+check_alarm() 
 window.protocol("WM_DELETE_WINDOW", on_close)
 window.mainloop()
