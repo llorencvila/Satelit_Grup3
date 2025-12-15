@@ -15,8 +15,11 @@ import os
 from datetime import datetime
 from tkinter import ttk
 import tkinter as tk
+from matplotlib.animation import FuncAnimation
+from matplotlib.figure import Figure
 
-Debug_RecepcioSimulada = False #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
+
+Debug_RecepcioSimulada = True #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
                               #És d'utilitat per fer proves amb el codi si no es disposa del maquinari físic (els dos arduinos)
 
 # ───────────────────────────────────────────────
@@ -43,16 +46,18 @@ histCoordx = []
 histCoordy = []
 histCoordz = []
 
+mode_orbita = "2D"   # o "3D"
 
 contact = []
 parametres = 4
 Llista_Arguments_Ordres = ["stop", "seguir", "freq"]
 llista_Arguments_Radar = ["vel", "lock", "moure", "escombreig"]
-llista_Id_sys = ["temp", "hum", "radar", "alarmes", "all"]
+llista_Id_sys = ["temp", "hum", "radar", "alarmes", "escombreig", "all"]
 noms_alarmes = ["Temperatura", "Humitat", "Distancia", "Perduda Conexió", "Error de sintaxi"]
 
-
 R_EARTH = 6371000  # radi de la Terra en metres
+R_EARTH = 6.371e6      # Radi de la Terra (m)
+R_ORBIT = 6.8e6       # Radi de l'òrbita (exemple)
 
 #variables per l'alarma de la mitjana de temperatura i humitat
 
@@ -63,6 +68,9 @@ Hmax_val = None
 mySerialOrbit = None
 
 stopCalc = False
+
+#currentplot = 0  # 0 = 2D, 1 = 3D       variable per variar les gràfiques de les òrbites
+
 
 # -------- Esdeveniments (log) -----------
 EVENTS_FILE = "events_log.csv"   # ruta del fitxer on es guarden els events
@@ -102,6 +110,32 @@ def validar_numero(entry_widget):
         Notificació_Alarma(4)
         add_event("Alarma", "Error de sintaxi: valor no numèric")
         return None
+
+# ───────────────────────────────────────────────
+# BOTÓ PER CANVIAR ENTRE GRÀFIQUES
+# ───────────────────────────────────────────────
+def canviar_grafica_orbita():
+    global mode_orbita
+
+    if mode_orbita == "2D":
+        # Amagar 2D
+        canvas_orbita.get_tk_widget().grid_remove()
+
+        # Mostrar 3D
+        orbit3d.canvas.get_tk_widget().grid(row=0, column=0, padx=5, pady=5, sticky=N+S+E+W, rowspan = 1)
+
+        mode_orbita = "3D"
+
+    else:
+        # Amagar 3D
+        orbit3d.canvas.get_tk_widget().grid_remove()
+
+        # Mostrar 2D
+        canvas_orbita.get_tk_widget().grid(row=0, column=0, padx=5, pady=5, sticky=N+S+E+W, rowspan = 1)
+
+        mode_orbita = "2D"
+
+
 
 # ─────────────────────────────────────────────────────
 # FUNCIÓ MESSAGEBOX QUE NO CONGELI TOT EL PROGRAMA
@@ -176,6 +210,7 @@ def Hmax():
 
 
 def activar_mitjanes_EstTerra():
+    
     global stopCalc
     stopCalc = False
     mitjanes_EstTerra()
@@ -227,10 +262,6 @@ def Send_Ordres(Argument, info):
             else:
                 i = i+1
 
-        if trobat == 0:
-            Notificació_Alarma(4)
-            return
-        
         if Codi_Argument == 0 or Codi_Argument == 1: # Si el argument == a Stop o Seguir
             trobat = 0
             i = 0
@@ -448,11 +479,6 @@ def add_event(tipo, description, dt=None, persist=True):
     - persist: si True, escriu al fitxer immediatament
     """
 
-    # --- Filtre: ignora els dos primers esdeveniments ---
-    #if len(events) < 2:
-        #return
-    # ----------------------------------------------------
-
     if tipo not in EVENT_TYPES:
         tipo = "Observació"  # fallback
     if dt is None:
@@ -494,9 +520,10 @@ def add_event(tipo, description, dt=None, persist=True):
 # ───────────────────────────────────────────────
 # FINESTRA PRINCIPAL TKINTER
 # ───────────────────────────────────────────────
-window = Tk()
+window = tk.Tk()
 window.geometry("1100x710")
 window.title("Control de transmissió de dades")
+
 
 window.columnconfigure(0, weight=1, uniform="col")
 window.columnconfigure(1, weight=1, uniform="col")
@@ -531,9 +558,6 @@ IniciarHTButton.grid(row=0, column=0, padx=5, pady=5, sticky=N + S + E + W)
 
 PararHTButton = Button(button_HT_frame, text="Pausa", bg='#FFB74D', fg="white", font=("Arial", 15), command=stopHT)
 PararHTButton.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
-
-#grafiquesButton = Button(button_HT_frame, text="grafiques", bg='#6BD66B', fg="white", font=("Arial", 15), command=switch_orbit)
-#grafiquesButton.grid(row=0, column=3, padx=5, pady=5, sticky=N + S + E + W)
 
 CalculArduinoButton = Button(button_HT_frame, text="Calcula la mitjana al satèl·lit", bg="#FF4D6B", fg="white", font=("Arial", 15), command=MitjanesArduinoTkinterFriendly)
 CalculArduinoButton.grid(row=6, column=0, padx=10, pady=5, sticky=N + S + E + W)
@@ -633,19 +657,25 @@ grafHT_frame.columnconfigure(0, weight=1)
 
 #─────────────────FRAME GRÀFICA DISTÀNCIA─────────────────
 graf_dist_frame = LabelFrame(window, text = 'Gràfica sensor de distància', font=("Arial", 15))
-graf_dist_frame.grid(row=0, column=2, rowspan = 2, padx=5, pady=5, sticky=N + S + E + W)
+graf_dist_frame.grid(row=0, column=2, rowspan = 1, padx=5, pady=5, sticky=N + S + E + W)
 
 graf_dist_frame.rowconfigure(0, weight=1)
 graf_dist_frame.columnconfigure(0, weight=1)
 
 #─────────────────FRAME SIMULADOR D'ÒRBITA─────────────────
 graf_orbita_frame = LabelFrame(window, text='Òrbita satèl·lit', font=("Arial", 15))
-graf_orbita_frame.grid(row=2, column=2, rowspan = 2, padx=5, pady=5, sticky=N + S + E + W)
+graf_orbita_frame.grid(row=1, column=2, rowspan = 3, padx=5, pady=5, sticky=N + S + E + W)
 
 graf_orbita_frame.rowconfigure(0, weight=1)
+graf_orbita_frame.rowconfigure(1, weight=0)
+
 graf_orbita_frame.columnconfigure(0, weight=1)
 
-# Figura òrbita
+CanviGraf_distButton = Button(graf_orbita_frame, text="Canviar de gràfica", bg='#A78BFA', fg="white", font=("Arial", 15), command=canviar_grafica_orbita)
+CanviGraf_distButton.grid(row=1, column=0, padx=5, pady=5, sticky="ew")
+
+
+#-------------------Figura òrbita 2D-------------------------
 fig_orbita, ax_orbita = plt.subplots(figsize=(5, 4))
 
 orbit_plot, = ax_orbita.plot([], [], 'bo-', markersize=2, label='Òrbita')
@@ -835,12 +865,8 @@ def enviar_comanda_manual():
         if accio == "Ordres":
             if argument == "Freqüència":
                 Send_Canvi_Frequencia(v1, int(v2))
-            else: #Start i stop
-                print("checkbox: ")
-                print(argument.lower())
-                print(v1.lower())
-                Send_Ordres(argument.lower(),v1.lower())
-                
+            else:
+                Send_Ordres(argument,int(v1))
 
         elif accio == "Radar":
             if argument == "Lock":
@@ -862,7 +888,6 @@ def enviar_comanda_manual():
 send_cmd_btn = Button(manual_cmd_frame, text="Enviar", bg='#4DA3FF', fg="white",
                       font=("Arial", 14), command=enviar_comanda_manual)
 send_cmd_btn.grid(row=0, column=4, padx=5, pady=5, sticky=E+W)
-
 
 
 # ───────────────────────────────────────────────
@@ -920,9 +945,6 @@ def draw_earth_slice(z):
 earth_slice = draw_earth_slice(0)
 ax_orbita.add_artist(earth_slice)
 
-
-#-------------Grafica Simulació de l'òrbita 3D-------------
-
 # ───────────────────────────────────────────────
 # FIL DE RECEPCIÓ DE DADES
 # ───────────────────────────────────────────────
@@ -930,77 +952,66 @@ def recepcion():
     while True:
         if Debug_RecepcioSimulada == False :
             if mySerial and mySerial.in_waiting > 0:
-                try:
-                    #Rebem la informació
-                    linea = mySerial.readline().decode('utf-8').rstrip()
-                    print("linea : "+str(linea))
-                    data_chunks = linea.split(';') #Type list // data[x] = Type: str
-    
-                except UnicodeDecodeError:
-                    print("Error en la rebuda de dades")
-                    Notificació_Alarma(3)
+                linea = mySerial.readline().decode('utf-8').rstrip()
+                print("linea : "+str(linea))
+                #Rebem la línea d'informació
 
                 #Comprovem el checksum
-                if (len(data_chunks)>=3):
-                    try:
-                        Checksum_Missatge = linea.rsplit(";",1)[1] #Adruirim el ultim element de la llista, en aquest cas, el checksum
-                        MissatgeMenysChecksum = linea.rsplit(";",1)[0]
-                        print("Checksum Reconstruit: "+str(Generar_Checksum(MissatgeMenysChecksum)))
-                        print("Checksum rebut : " + str(Checksum_Missatge))
-                        
+                try:
+                    Checksum_Missatge = linea.rsplit(";",1)[1] #Adruirim el ultim element de la llista, en aquest cas, el checksum
+                    MissatgeMenysChecksum = linea.rsplit(";",1)[0]
+                    print("Checksum Reconstruit: "+str(Generar_Checksum(MissatgeMenysChecksum)))
+                    print("Checksum rebut : " + str(Checksum_Missatge) +" "+str(type(Checksum_Missatge)))
+                    
+                    if Generar_Checksum(MissatgeMenysChecksum) != int(Checksum_Missatge):
+                        #Error en el checksum
+                        #Implementar addevent
+                        Notificació_Alarma(3)
+                        print("-----ERROR_CHECKSUM-----")
+                    else:
+                        #iMPORTANT : DE MOMENT ESTÀ AIXI MENTRESTANT QUE EL CHECKSUM NO ESTÀ IMPLEMENTAT DEL TOT, UN COP SIUGI FUNCIONAL S'HA DE TREURE I DEIXAR NOMES EL ELSE
+                        data_chunks = linea.split(';') #Type list // data[x] = Type: str
+                        accio = data_chunks[0]
+                        print("Acció : "+str(accio))
+                        data = data_chunks[1].split(":")
+                        #print(data)
+                        #OBSERVACIONS
+                        if accio == "0": 
+                            #if len(data) == parametres: #Comprovació que rebem totes les dades
+                            contact.append(int(temps()))
+                            """
+                            print("Humitat:", data[0])
+                            print("Temp:   ", data[1]) 
+                            print("Pos:", (int (data[2])/4779)*360)
+                            print("Dist:   ", data[3])
+                            print("Mitjana Hum:   ", data[4]) 
+                            print("Mitjana Temp:   ", data[5])
+                            print("Temps òrbita:  ",data[6])
+                            print("Coord x:  ",data[7])
+                            print("Coord y:  ",data[8])
+                            print("Coord z:  ",data[9])
+                            """
+                            #print(temps())
+                            histH.append(float(data[0]))
+                            histT.append(float(data[1]))
+                            histAng.append(float(data[2]))
+                            histDist.append(float(data[3]))
+                            histmitjH.append(float(data[4]))
+                            histmitjT.append(float(data[5]))
+                            histTemps.append(float(data[6]))
+                            histCoordx.append(float(data[7]))
+                            histCoordy.append(float(data[8]))
+                            histCoordz.append(float(data[9]))
+                            label_mitjanaT_arduino.config(text=f"Mitjana T Arduino: {float(data[5]):.2f} °C")
+                            label_mitjanaH_arduino.config(text=f"Mitjana H Arduino: {float(data[4]):.2f} %")
 
-                        if Generar_Checksum(MissatgeMenysChecksum) != int(Checksum_Missatge):
-                            #Error en el checksum
-                            #Implementar addevent
-                            Notificació_Alarma(3)
-                            print("-----ERROR_CHECKSUM-----")
-                        else:
-                            #iMPORTANT : DE MOMENT ESTÀ AIXI MENTRESTANT QUE EL CHECKSUM NO ESTÀ IMPLEMENTAT DEL TOT, UN COP SIUGI FUNCIONAL S'HA DE TREURE I DEIXAR NOMES EL ELSE
-                            data_chunks = linea.split(';') #Type list // data[x] = Type: str
-                            accio = data_chunks[0]
-                            print("Acció : "+str(accio))
-                            data = data_chunks[1].split(":")
-                            #print(data)
-                            #OBSERVACIONS
-                            if accio == "0": 
-                                #if len(data) == parametres: #Comprovació que rebem totes les dades
-                                contact.append(int(temps()))
-                                """
-                                print("Humitat:", data[0])
-                                print("Temp:   ", data[1]) 
-                                print("Pos:", (int (data[2])/4779)*360)
-                                print("Dist:   ", data[3])
-                                print("Mitjana Hum:   ", data[4]) 
-                                print("Mitjana Temp:   ", data[5])
-                                print("Temps òrbita:  ",data[6])
-                                print("Coord x:  ",data[7])
-                                print("Coord y:  ",data[8])
-                                print("Coord z:  ",data[9])
-                                """
-                                #print(temps())
-                                histH.append(float(data[0]))
-                                histT.append(float(data[1]))
-                                histAng.append(float(data[2]))
-                                histDist.append(float(data[3]))
-                                histmitjH.append(float(data[4]))
-                                histmitjT.append(float(data[5]))
-                                histTemps.append(float(data[6]))
-                                histCoordx.append(float(data[7]))
-                                histCoordy.append(float(data[8]))
-                                histCoordz.append(float(data[9]))
-                                label_mitjanaT_arduino.config(text=f"Mitjana T Arduino: {float(data[5]):.2f} °C")
-                                label_mitjanaH_arduino.config(text=f"Mitjana H Arduino: {float(data[4]):.2f} %")
-
-                            #ALARMES
-                            elif accio == "1":
-                                threadNotificacio = threading.Thread(target=Notificació_Alarma(int(data[0])))
-                                threadNotificacio.start()
-                    except IndexError or ValueError:
-                        print("Error intern recepció INDEX OUT OF RANGE")
-                        Notificació_Alarma(3);    
-                else:
-                    print("ERROR: Falten arguments en el missatge")
-                    Notificació_Alarma(3)   
+                        #ALARMES
+                        elif accio == "1":
+                            threadNotificacio = threading.Thread(target=Notificació_Alarma(int(data[0])))
+                            threadNotificacio.start()
+                except IndexError:
+                    print("Error intern recepció INDEX OUT OF RANGE")
+                    Notificació_Alarma(3);          
                     
         else: 
             with data_lock: #No acabo d'entendre perque fem servir el thread.lock() si la variable que accedim no es compartida ni s'edita enlloc més
@@ -1011,9 +1022,9 @@ def recepcion():
                 histmitjH.append(float("%.2f" % random.uniform(0,100)))
                 histmitjT.append(float("%.2f" % random.uniform(0,100)))
                 #histTemps.append(float(temps_sim))
-                histCoordx.append(float("%.2f" % random.uniform(0,6500000)))
-                histCoordy.append(float("%.2f" % random.uniform(0,6500000)))
-                histCoordz.append(float("%.2f" % random.uniform(0,6500000)))
+                histCoordx.append(float("%.2f" % random.uniform(-6500000,6500000)))
+                histCoordy.append(float("%.2f" % random.uniform(-6500000,6500000)))
+                histCoordz.append(float("%.2f" % random.uniform(-6500000,6500000)))
                 #temps_sim += 1
                 #threading.Event().wait(1.0)
                 contact.append(int(temps()))
@@ -1024,10 +1035,9 @@ def recepcion():
         #actualitzar_grafica()
         #plt.pause(0.5)
 
-# ───────────────────────────────────────────────
-# ACTUALITZACIÓ DE LA GRÀFICA DINS TKINTER 
-# ───────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────
 #FUNCIÓ PER ACTUALITZAR LA GRÀFICA DE TEMPERATURA I HUMITAT
+# ─────────────────────────────────────────────────────────
 def actualitzar_graficaHT():
     try:
         if contact:
@@ -1230,7 +1240,7 @@ def actualitzar_grafica_radar():
 # FUNCIÓ PER ACTUALITZAR LA GRÀFICA DE SIMULACIÓ DE L'ÒRBITA 2D
 # ───────────────────────────────────────────────────────────────
 
-def actualitzar_grafica_orbita():
+def update_orbit2D():
     try:
         if histCoordx and histCoordy:
             # Actualitzar línia d’òrbita
@@ -1264,16 +1274,106 @@ def actualitzar_grafica_orbita():
 
             canvas_orbita.draw_idle()
 
-        window.after(200, actualitzar_grafica_orbita)
+        window.after(200, update_orbit2D)
 
     except Exception as e:
-        print("ERROR a actualitzar_grafica_orbita:", e)
-
+        print("ERROR a update_orbit2D:", e)
 
 # ───────────────────────────────────────────────────────────────
-# FUNCIÓ PER ACTUALITZAR LA GRÀFICA DE SIMULACIÓ DE L'ÒRBITA 3D
+# DIBUIX I ACTUALITZACIÓ DE LA GRÀFICA DE LA ÒRBITA 3D
 # ───────────────────────────────────────────────────────────────
 
+class GroundStationGUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Estació de Terra")
+
+        self.plot_frame = ttk.Frame(root)
+        self.plot_frame.pack(fill=tk.BOTH, expand=True)
+
+        self.orbit_plot = OrbitPlot3D(self.plot_frame)
+
+        # Iniciem el refresc
+        self.update_plot()
+
+    def update_plot(self):
+        # Aquí només llegeixes els vectors
+        self.orbit_plot.update(histCoordx, histCoordy, histCoordz)
+
+        # Torna a cridar-se cada 200 ms
+        self.root.after(200, self.update_plot)
+
+
+def update_orbit3D():
+    try:
+        orbit3d.update(histCoordx, histCoordy, histCoordz)
+        window.after(200, update_orbit3D)
+    except Exception as e:
+        print("ERROR a update_orbit3D:", e)
+
+
+def draw_earth_3d(ax, radius=R_EARTH):
+    u = np.linspace(0, 2 * np.pi, 60)
+    v = np.linspace(0, np.pi, 30)
+
+    x = radius * np.outer(np.cos(u), np.sin(v))
+    y = radius * np.outer(np.sin(u), np.sin(v))
+    z = radius * np.outer(np.ones(np.size(u)), np.cos(v))
+
+    ax.plot_surface(x, y, z, rstride=2, cstride=2, color='blue', alpha=0.4, linewidth=0)
+
+class OrbitPlot3D:
+    def __init__(self, parent):
+        self.fig = Figure(figsize=(6, 6))
+        self.ax = self.fig.add_subplot(111, projection='3d')
+        draw_earth_3d(self.ax, R_EARTH)
+
+
+        self.ax.set_title("Òrbita del satèl·lit")
+        self.ax.set_xlabel("X (m)")
+        self.ax.set_ylabel("Y (m)")
+        self.ax.set_zlabel("Z (m)")
+
+        self.ax.set_xlim(-7e6, 7e6)
+        self.ax.set_ylim(-7e6, 7e6)
+        self.ax.set_zlim(-7e6, 7e6)
+
+
+        self.ax.set_box_aspect([1, 1, 1])
+
+        self.canvas = FigureCanvasTkAgg(self.fig, master=parent)
+        self.canvas.get_tk_widget().grid(row=0, column=0, rowspan=1, sticky="nsew")
+
+        parent.rowconfigure(0, weight=1)
+        parent.columnconfigure(0, weight=1)
+
+
+        # Inicialitzem la línia (important!)
+        self.orbit_line, = self.ax.plot([], [], [], 'b', label="Òrbita")
+        self.last_point, = self.ax.plot([], [], [], 'ro', label="Últim punt")
+
+        self.ax.legend()
+
+    def update(self, x, y, z):
+        if len(x) < 2:
+            return
+
+        self.orbit_line.set_data(x, y)
+        self.orbit_line.set_3d_properties(z)
+
+        self.last_point.set_data([x[-1]], [y[-1]])
+        self.last_point.set_3d_properties([z[-1]])
+
+        self.ax.relim()
+        self.ax.autoscale_view()
+
+        self.canvas.draw_idle()
+
+
+orbit3d = OrbitPlot3D(graf_orbita_frame)
+orbit3d.canvas.get_tk_widget().grid_remove()
+
+    
 
 # ───────────────────────────────────────────────
 # LLANÇAR FIL I INICIAR GUI
@@ -1286,7 +1386,9 @@ threadRecepcion.start()
 # iniciar actualització periòdica
 window.after(50, actualitzar_graficaHT)
 window.after(200, actualitzar_grafica_radar)
-window.after(200, actualitzar_grafica_orbita)
+window.after(200, update_orbit2D)
+window.after(200, update_orbit3D)
+
 
 
 
