@@ -18,7 +18,8 @@ import tkinter as tk
 from matplotlib.animation import FuncAnimation
 from matplotlib.figure import Figure
 
-Debug_RecepcioSimulada = False #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
+
+Debug_RecepcioSimulada = True #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
                               #És d'utilitat per fer proves amb el codi si no es disposa del maquinari físic (els dos arduinos)
 
 # ───────────────────────────────────────────────
@@ -51,9 +52,8 @@ contact = []
 parametres = 4
 Llista_Arguments_Ordres = ["stop", "seguir", "freq"]
 llista_Arguments_Radar = ["vel", "lock", "moure", "escombreig"]
-llista_Id_sys = ["temp", "hum", "radar", "alarmes", "all"]
+llista_Id_sys = ["temp", "hum", "radar", "alarmes", "escombreig", "all"]
 noms_alarmes = ["Temperatura", "Humitat", "Distancia", "Perduda Conexió", "Error de sintaxi"]
-
 
 R_EARTH = 6371000  # radi de la Terra en metres
 R_EARTH = 6.371e6      # Radi de la Terra (m)
@@ -262,10 +262,6 @@ def Send_Ordres(Argument, info):
             else:
                 i = i+1
 
-        if trobat == 0:
-            Notificació_Alarma(4)
-            return
-        
         if Codi_Argument == 0 or Codi_Argument == 1: # Si el argument == a Stop o Seguir
             trobat = 0
             i = 0
@@ -869,12 +865,8 @@ def enviar_comanda_manual():
         if accio == "Ordres":
             if argument == "Freqüència":
                 Send_Canvi_Frequencia(v1, int(v2))
-            else: #Start i stop
-                print("checkbox: ")
-                print(argument.lower())
-                print(v1.lower())
-                Send_Ordres(argument.lower(),v1.lower())
-                
+            else:
+                Send_Ordres(argument,int(v1))
 
         elif accio == "Radar":
             if argument == "Lock":
@@ -953,9 +945,6 @@ def draw_earth_slice(z):
 earth_slice = draw_earth_slice(0)
 ax_orbita.add_artist(earth_slice)
 
-
-#-------------Grafica Simulació de l'òrbita 3D-------------
-
 # ───────────────────────────────────────────────
 # FIL DE RECEPCIÓ DE DADES
 # ───────────────────────────────────────────────
@@ -963,77 +952,66 @@ def recepcion():
     while True:
         if Debug_RecepcioSimulada == False :
             if mySerial and mySerial.in_waiting > 0:
-                try:
-                    #Rebem la informació
-                    linea = mySerial.readline().decode('utf-8').rstrip()
-                    print("linea : "+str(linea))
-                    data_chunks = linea.split(';') #Type list // data[x] = Type: str
-    
-                except UnicodeDecodeError:
-                    print("Error en la rebuda de dades")
-                    Notificació_Alarma(3)
+                linea = mySerial.readline().decode('utf-8').rstrip()
+                print("linea : "+str(linea))
+                #Rebem la línea d'informació
 
                 #Comprovem el checksum
-                if (len(data_chunks)>=3):
-                    try:
-                        Checksum_Missatge = linea.rsplit(";",1)[1] #Adruirim el ultim element de la llista, en aquest cas, el checksum
-                        MissatgeMenysChecksum = linea.rsplit(";",1)[0]
-                        print("Checksum Reconstruit: "+str(Generar_Checksum(MissatgeMenysChecksum)))
-                        print("Checksum rebut : " + str(Checksum_Missatge))
-                        
+                try:
+                    Checksum_Missatge = linea.rsplit(";",1)[1] #Adruirim el ultim element de la llista, en aquest cas, el checksum
+                    MissatgeMenysChecksum = linea.rsplit(";",1)[0]
+                    print("Checksum Reconstruit: "+str(Generar_Checksum(MissatgeMenysChecksum)))
+                    print("Checksum rebut : " + str(Checksum_Missatge) +" "+str(type(Checksum_Missatge)))
+                    
+                    if Generar_Checksum(MissatgeMenysChecksum) != int(Checksum_Missatge):
+                        #Error en el checksum
+                        #Implementar addevent
+                        Notificació_Alarma(3)
+                        print("-----ERROR_CHECKSUM-----")
+                    else:
+                        #iMPORTANT : DE MOMENT ESTÀ AIXI MENTRESTANT QUE EL CHECKSUM NO ESTÀ IMPLEMENTAT DEL TOT, UN COP SIUGI FUNCIONAL S'HA DE TREURE I DEIXAR NOMES EL ELSE
+                        data_chunks = linea.split(';') #Type list // data[x] = Type: str
+                        accio = data_chunks[0]
+                        print("Acció : "+str(accio))
+                        data = data_chunks[1].split(":")
+                        #print(data)
+                        #OBSERVACIONS
+                        if accio == "0": 
+                            #if len(data) == parametres: #Comprovació que rebem totes les dades
+                            contact.append(int(temps()))
+                            """
+                            print("Humitat:", data[0])
+                            print("Temp:   ", data[1]) 
+                            print("Pos:", (int (data[2])/4779)*360)
+                            print("Dist:   ", data[3])
+                            print("Mitjana Hum:   ", data[4]) 
+                            print("Mitjana Temp:   ", data[5])
+                            print("Temps òrbita:  ",data[6])
+                            print("Coord x:  ",data[7])
+                            print("Coord y:  ",data[8])
+                            print("Coord z:  ",data[9])
+                            """
+                            #print(temps())
+                            histH.append(float(data[0]))
+                            histT.append(float(data[1]))
+                            histAng.append(float(data[2]))
+                            histDist.append(float(data[3]))
+                            histmitjH.append(float(data[4]))
+                            histmitjT.append(float(data[5]))
+                            histTemps.append(float(data[6]))
+                            histCoordx.append(float(data[7]))
+                            histCoordy.append(float(data[8]))
+                            histCoordz.append(float(data[9]))
+                            label_mitjanaT_arduino.config(text=f"Mitjana T Arduino: {float(data[5]):.2f} °C")
+                            label_mitjanaH_arduino.config(text=f"Mitjana H Arduino: {float(data[4]):.2f} %")
 
-                        if Generar_Checksum(MissatgeMenysChecksum) != int(Checksum_Missatge):
-                            #Error en el checksum
-                            #Implementar addevent
-                            Notificació_Alarma(3)
-                            print("-----ERROR_CHECKSUM-----")
-                        else:
-                            #iMPORTANT : DE MOMENT ESTÀ AIXI MENTRESTANT QUE EL CHECKSUM NO ESTÀ IMPLEMENTAT DEL TOT, UN COP SIUGI FUNCIONAL S'HA DE TREURE I DEIXAR NOMES EL ELSE
-                            data_chunks = linea.split(';') #Type list // data[x] = Type: str
-                            accio = data_chunks[0]
-                            print("Acció : "+str(accio))
-                            data = data_chunks[1].split(":")
-                            #print(data)
-                            #OBSERVACIONS
-                            if accio == "0": 
-                                #if len(data) == parametres: #Comprovació que rebem totes les dades
-                                contact.append(int(temps()))
-                                """
-                                print("Humitat:", data[0])
-                                print("Temp:   ", data[1]) 
-                                print("Pos:", (int (data[2])/4779)*360)
-                                print("Dist:   ", data[3])
-                                print("Mitjana Hum:   ", data[4]) 
-                                print("Mitjana Temp:   ", data[5])
-                                print("Temps òrbita:  ",data[6])
-                                print("Coord x:  ",data[7])
-                                print("Coord y:  ",data[8])
-                                print("Coord z:  ",data[9])
-                                """
-                                #print(temps())
-                                histH.append(float(data[0]))
-                                histT.append(float(data[1]))
-                                histAng.append(float(data[2]))
-                                histDist.append(float(data[3]))
-                                histmitjH.append(float(data[4]))
-                                histmitjT.append(float(data[5]))
-                                histTemps.append(float(data[6]))
-                                histCoordx.append(float(data[7]))
-                                histCoordy.append(float(data[8]))
-                                histCoordz.append(float(data[9]))
-                                label_mitjanaT_arduino.config(text=f"Mitjana T Arduino: {float(data[5]):.2f} °C")
-                                label_mitjanaH_arduino.config(text=f"Mitjana H Arduino: {float(data[4]):.2f} %")
-
-                            #ALARMES
-                            elif accio == "1":
-                                threadNotificacio = threading.Thread(target=Notificació_Alarma(int(data[0])))
-                                threadNotificacio.start()
-                    except IndexError or ValueError:
-                        print("Error intern recepció INDEX OUT OF RANGE")
-                        Notificació_Alarma(3);    
-                else:
-                    print("ERROR: Falten arguments en el missatge")
-                    Notificació_Alarma(3)   
+                        #ALARMES
+                        elif accio == "1":
+                            threadNotificacio = threading.Thread(target=Notificació_Alarma(int(data[0])))
+                            threadNotificacio.start()
+                except IndexError:
+                    print("Error intern recepció INDEX OUT OF RANGE")
+                    Notificació_Alarma(3);          
                     
         else: 
             with data_lock: #No acabo d'entendre perque fem servir el thread.lock() si la variable que accedim no es compartida ni s'edita enlloc més
