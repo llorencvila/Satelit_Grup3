@@ -1,3 +1,6 @@
+> [!WARNING]
+> ENTREGA EL DIJOUS A LES 8H
+
 # **Satelit_Grup3**
 Grup format per Èlia i Llorenç
 
