@@ -44,6 +44,8 @@ int llargadaSteps = 1;
 
 Stepper myStepper(stepsPerRotation, OUTPUT1, OUTPUT3, OUTPUT2, OUTPUT4);
 
+Posiciointorduida = 0;
+
 // ----- Sensor ultrasons -----
 const int EchoPin = 9;
 const int TriggerPin = 3;
@@ -216,14 +218,18 @@ int GetDist() {
 // ===============================================================
 // MOTOR
 // ===============================================================
-void MoureMotor() {
+void MoureMotor(int incrementposicio) {
   if (EstatFuncionamentSistemes[4] == 1) {
+    if (incementposicio == 0){
+      if (pos <= 0) Sentit = 1;
+      else if (pos >= stepsPerRotation) Sentit = -1;
+      myStepper.step(Sentit * llargadaSteps);
+      pos += Sentit * llargadaSteps;
 
-    if (pos <= 0) Sentit = 1;
-    else if (pos >= stepsPerRotation) Sentit = -1;
-
-    myStepper.step(Sentit * llargadaSteps);
-    pos += Sentit * llargadaSteps;
+    }else{
+      myStepper.step(incrementposicio);
+      pos = incrementposicio;
+    }
   }
 }
 
@@ -398,8 +404,9 @@ void GetInfo() {
     }else if (Argument == 1){
       //CODI LOCK
     } else if (Argument == 2){
-      pos = ElementsUltimMissatge[2];
-
+      posiciointroduida = ElementsUltimMissatge[2];
+      incrementposicio = pos - posiciointroduida;
+      MoureMotor(incrementposicio);
     }
 
     }
@@ -411,54 +418,6 @@ void GetInfo() {
 
 }
 
-/*
-  for (int i = 0; i < 4; i++) ElementsUltimMissatge[i] = 0;
-
-  int idx = 0;
-  int start = 0;
-  int sep;
-
-  while ((sep = data.indexOf(";", start)) != -1 && idx < 4) {
-    ElementsUltimMissatge[idx] = data.substring(start, sep).toInt();
-    start = sep + 1;
-    idx++;  
-  }
-
-  if (idx < 4)
-    ElementsUltimMissatge[idx] = data.substring(start).toInt();
-
-  int accio = ElementsUltimMissatge[0];
-  int argument = ElementsUltimMissatge[1];
-  int valor1 = ElementsUltimMissatge[2];
-  int valor2 = ElementsUltimMissatge[3];
-  int CheckSum = ElementsUltimMissatge[4];
-
-  if (accio == 2) {
-    if (argument == 0)   EstatFuncionamentSistemes[valor1] = 0;
-    if (argument == 2)   EstatFuncionamentSistemes[valor1] = 1;
-    if (argument == 3){
-      PeriodeEmisioDelsSistemes[valor1] = valor2;
-      Serial.print("Periode emisió ");
-      Serial.print(valor1);
-      Serial.print(" establert a ");
-      Serial.print(valor2);
-    }
-  }
-
-  if (accio == 3) {
-    if (argument == 0) llargadaSteps = valor1;
-    if (argument == 2) pos = valor1;
-  }
-
-  if (accio == 4) {
-    if (argument == 0){
-      EstatFuncionamentSistemes[5] = 1;
-    } 
-    else if (argument == 1){
-      EstatFuncionamentSistemes[5] = 0;
-    }
-  }
-  */
 
 // ===============================================================
 // LOOP PRINCIPAL
@@ -484,4 +443,3 @@ void loop() {
     }
   }
 }
-
