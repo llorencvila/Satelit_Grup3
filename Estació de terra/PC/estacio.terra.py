@@ -83,7 +83,7 @@ update_mitjanaT = False
 
 # -------- Esdeveniments (log) -----------
 EVENTS_FILE = "events_log.csv"   # ruta del fitxer on es guarden els events
-EVENT_TYPES = ["Comanda", "Alarma", "Observació"]  # els tres tipus que demanes
+EVENT_TYPES = ["Comanda", "Alarma", "Observació","Radar","Ordre","Mitjanes"]  # els cinc tipus que demanes
 
 events = []   # llista de dicts: {"datetime": datetime obj, "tipo": str, "desc": str}
 events_lock = threading.Lock()  # per sincronitzar accés a events
@@ -518,7 +518,6 @@ def save_all_events_to_file():
 
 def add_event(tipo, description, dt=None, persist=True):
 
-
     if tipo not in EVENT_TYPES:
         tipo = "Observació"  # fallback
     if dt is None:
@@ -861,7 +860,7 @@ combo_accions.set("Selecciona acció")
 combo_accions.grid(row=0, column=0, padx=5, pady=5, sticky=E+W)
 
 # --- DESPLEGABLE ARGUMENTS (10 opcions) ---
-opcions_arguments = ["Stop","Start","Freqüència","Velocitat","Lock","Moure"]
+opcions_arguments = ["Stop","Start","Freqüència","Velocitat","Lock","Moure","Satèl.lit","Estació de terra"]
 combo_arguments = ttk.Combobox(manual_cmd_frame, values=opcions_arguments, state="readonly", font=("Arial", 12))
 combo_arguments.set("Selecciona argument")
 combo_arguments.grid(row=0, column=1, padx=5, pady=5, sticky=E+W)
@@ -879,39 +878,45 @@ entry_valor2.grid(row=0, column=3, padx=5, pady=5, sticky=E+W)
 def enviar_comanda_manual():
     accio = combo_accions.get()
     argument = combo_arguments.get()
-    v1 = entry_valor1.get()
-    v2 = entry_valor2.get()
+    v1 = entry_valor1.get().lower()
+    v2 = entry_valor2.get().lower()
     
     try:
         if accio == "Ordres":
             if argument == "Freqüència":
                 Send_Canvi_Frequencia(v1, int(v2))
+                add_event("Ordre", f"Canvi de freqüència: {v1}, {v2}")
             else: #Start i stop
-                print("checkbox: ")
-                print(argument.lower())
-                print(v1.lower())
                 Send_Ordres(argument.lower(),v1.lower())
+                add_event("Ordre", f"Ordre manual: {argument.lower()} {v1.lower()}")
                 
 
         elif accio == "Radar":
             if argument == "Lock":
                 Send_Radar(argument, int(v1), int(v2))
-            else:
-                Send_Radar(argument, abs(int(v1)))
+                add_event("Radar", f"Radar Lock: {v1}, {v2}")
+            elif argument == "Moure":
+                Send_Radar(argument, abs(int(v1)),0)
+                add_event("Radar", f"Moviment: {v1}")
+            elif argument == "Velocitat":
+                Send_Radar(argument, abs(int(v1)),0)
+                add_event("Radar", f"Canvi de velocitat: {v1}")
 
         elif accio == "Mitjanes":
-            Send_Mitjanes_Arduino(argument, 0)
+            if argument == "Satèl.lit":
+                print ("sat")
+                MitjanesArduinoTkinterFriendly()
+                add_event("Mitjanes", f"Satèl.lit")
+            elif argument == "Estació de terra":
+                add_event("Mitjanes", f"Estació de terra")
+                activar_mitjanes_EstTerra(argument, 1)
 
-            print("Comanda manual:", accio, argument, v1, v2)
-            messagebox.showinfo("Comanda enviada", f"{accio}, {argument}, {v1}, {v2}")
-
-    except ValueError or UnboundLocalError: # Tant ValueError com UnboundLocalError són codis d'error que surten quant es crida una variable introduïnt uns paràmetres per els quals la variable no està preparada. És a dir, mostra els errors a l'hora de cirdar funcions
+    except ValueError or UnboundLocalError or TypeError: # Tant ValueError com UnboundLocalError són codis d'error que surten quant es crida una variable introduïnt uns paràmetres per els quals la variable no està preparada. És a dir, mostra els errors a l'hora de cirdar funcions
         Notificació_Alarma(4) #Error de sintaxi
 
 
 
-send_cmd_btn = Button(manual_cmd_frame, text="Enviar", bg='#4DA3FF', fg="white",
-                      font=("Arial", 14), command=enviar_comanda_manual)
+send_cmd_btn = Button(manual_cmd_frame, text="Enviar", bg='#4DA3FF', fg="white", font=("Arial", 14), command=enviar_comanda_manual)
 send_cmd_btn.grid(row=0, column=4, padx=5, pady=5, sticky=E+W)
 
 
