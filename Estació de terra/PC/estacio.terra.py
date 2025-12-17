@@ -18,14 +18,14 @@ import tkinter as tk
 from matplotlib.animation import FuncAnimation
 from matplotlib.figure import Figure
 
-Debug_RecepcioSimulada = True #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
+Debug_RecepcioSimulada = False #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
                               #És d'utilitat per fer proves amb el codi si no es disposa del maquinari físic (els dos arduinos)
 
 # ───────────────────────────────────────────────
 # CONFIGURACIÓ DEL PORT SÈRIE 
 # ───────────────────────────────────────────────
 if Debug_RecepcioSimulada == False:
-    device = 'COM11'
+    device = 'COM7'
     mySerial = serial.Serial(device, 9600)
     print("funcionant:")
 
@@ -55,11 +55,9 @@ alarms_shown = {}  # clau = codi alarma, valor = True si ja s'ha mostrat
 contact = []
 parametres = 4
 Llista_Arguments_Ordres = ["stop", "seguir", "freq"]
-llista_Arguments_Radar = ["Velocitat", "Lock", "Moure", "escombreig"]
+llista_Arguments_Radar = ["velocitat", "lock", "moure", "escombreig"]
 llista_Id_sys = ["temp", "hum", "radar", "alarmes", "all"]
 noms_alarmes = ["Temperatura", "Humitat", "Distancia", "Perduda Conexió", "Error de sintaxi","Temperatura màxima superada","Humitat màxima superada"]
-
-
 
 
 R_EARTH = 6371000  # radi de la Terra en metres
@@ -103,6 +101,17 @@ print ("Funcionant")
 def temps():
     return time.time() - t0
 
+'''
+CODI D'ALARMES:
+Alarma 0: Temperatura
+Alarma 1: Humitat
+Alarma 2: Distància
+Alarma 3: Pèrdua de conecció
+Alarma 4: Error de sintaxi
+Alarma 5: Temperatura màxima superada
+Alarma 6: Humitat màxima sueprada
+Alarma 7: Error de sintaxi per manual d'ordres
+'''
 
 def Notificació_Alarma(codi):
     if codi >= len(noms_alarmes):
@@ -114,44 +123,151 @@ def Notificació_Alarma(codi):
     # Si ja s'ha mostrat, no fem res
     if alarms_shown.get(codi, False):
         return
+    
+    if codi == 7:
+        def show_msg7():
+            print("dins la funicó d'alarma 7")
+            win = tk.Toplevel()
+            win.title("Alarma")
+            win.geometry("360x200")
+            win.resizable(False, False)
+            win.attributes("-topmost", True)
+            win.configure(bg="#f5f5f5")
+            win.protocol("WM_DELETE_WINDOW", lambda: close_alarm(win, codi))
 
-    alarms_shown[codi] = True  # marquem que s'ha mostrat
+            # Centrar
+            win.update_idletasks()
+            x = (win.winfo_screenwidth() - win.winfo_width()) // 2
+            y = (win.winfo_screenheight() - win.winfo_height()) // 3
+            win.geometry(f"+{x}+{y}")
 
-    # Mostrem la finestra al thread principal
-    def show_msg():
-        win = tk.Toplevel()
-        win.title("Alarma!")
-        win.geometry("350x150")
-        win.resizable(False, False)
-        win.attributes("-topmost", True)
+            # ─── Capçalera ─────────────────────────────
+            header = tk.Frame(win, bg="#b71c1c")
+            header.pack(fill="x")
 
-        # Centrem la finestra
-        win.update_idletasks()
-        x = (win.winfo_screenwidth() - win.winfo_width()) // 2
-        y = (win.winfo_screenheight() - win.winfo_height()) // 3
-        win.geometry(f"+{x}+{y}")
+            tk.Label(header, text="⚠ ALARMA", bg="#b71c1c", fg="white", font=("Helvetica", 14, "bold")).pack(padx=10, pady=8)
 
-        tk.Label(
-            win,
-            text=alarma_text,
-            wraplength=300,
-            justify="left",
-            font=("Helvetica", 12, "bold"),
-            fg="red"
-        ).pack(pady=15)
+            # ─── Cos ───────────────────────────────────
+            body = tk.Frame(win, bg="#f5f5f5")
+            body.pack(fill="both", expand=True)
 
-        tk.Button(
-            win,
-            text="OK",
-            command=lambda: close_alarm(win, codi),
-            font=("Helvetica", 14, "bold"),
-            fg="white",
-            bg="red",
-            width=10,
-            height=2
-        ).pack(pady=10)
+            tk.Label(body, text=alarma_text, wraplength=320, justify="left", bg="#f5f5f5", fg="#b71c1c", font=("Helvetica", 11, "bold")).pack(padx=15, pady=15)
 
-    window.after(0, show_msg)
+            # ─── Botons ────────────────────────────────
+            frame_botons = tk.Frame(body, bg="#f5f5f5")
+            frame_botons.pack(pady=(0, 15))
+
+            #botó ajuda
+            tk.Button(frame_botons, text="Ajuda", font=("Helvetica", 11), relief="flat", bg="#e0e0e0", activebackground="#d5d5d5", cursor="hand2", command=mostrar_ajuda).pack(side="left", padx=6)
+            #botó ok
+            tk.Button(frame_botons, text="OK", font=("Helvetica", 11, "bold"), relief="flat", bg="#b71c1c", fg="white", activebackground="#8e0000", cursor="hand2", width=8, command=lambda: close_alarm(win, codi)).pack(side="left", padx=6)
+
+
+        def mostrar_ajuda():
+            ajuda = tk.Toplevel()
+            ajuda.title("Com evitar l'error")
+            ajuda.geometry("520x420")
+            ajuda.resizable(True, True)
+            ajuda.configure(bg="#fafafa")
+
+            # Centrar
+            ajuda.update_idletasks()
+            x = (ajuda.winfo_screenwidth() - ajuda.winfo_width()) // 2
+            y = (ajuda.winfo_screenheight() - ajuda.winfo_height()) // 3
+            ajuda.geometry(f"+{x}+{y}")
+
+            # Títol
+            tk.Label(ajuda, text="Guia d'ús i esquema de comandes", font=("Helvetica", 13, "bold"), bg="#fafafa").pack(pady=(10, 5))
+
+            frame = tk.Frame(ajuda, bg="#fafafa")
+            frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+            scrollbar = tk.Scrollbar(frame)
+            scrollbar.pack(side="right", fill="y")
+
+            txt = tk.Text(frame, wrap="word", font=("Helvetica", 10), bg="#ffffff", relief="flat", padx=10, pady=10, yscrollcommand=scrollbar.set)
+            txt.pack(side="left", fill="both", expand=True)
+
+            scrollbar.config(command=txt.yview)
+
+            txt.insert(
+                "1.0",
+                "EXPLICACIÓ DE L'ESQUEMA\n\n"
+                "Posicions al frame de comanda manual:\n"
+                "  - Primera posició\n"
+                "    - Segona posició\n"
+                "      - Tercera posició\n"
+                "        - Quarta posició\n\n"
+                "SISTEMES:\n"
+                "  · hum (Humitat)\n"
+                "  · temp (Temperatura)\n"
+                "  · radar\n"
+                "  · alarmes\n"
+                "  · all (tots els sistemes)\n\n"
+                "SINTAXI ADEQUADA:\n\n"
+                "ORDRES:\n"
+                "  - Stop\n"
+                "    - Sistema\n"
+                "  - Seguir\n"
+                "    - Sistema\n"
+                "  - Freqüència\n"
+                "    - Sistema\n"
+                "      - Valor en milisegons\n\n"
+                "RADAR:\n"
+                "  - Escombreig\n"
+                "  - Lock\n"
+                "    - Posició inicial (0–4779)\n"
+                "      - Angle d'escombreig (0–4779)\n"
+                "  - Moure\n"
+                "    - Posició constant (0–4779)\n"
+                "  - Velocitat\n"
+                "    - Valor (0–500)\n\n"
+                "MITJANES:\n"
+                "  - Satèl·lit\n"
+                "  - Estació de terra\n"
+            )
+
+            txt.config(state="disabled")
+
+
+        window.after(0, show_msg7)
+        alarms_shown[codi] = True  # marquem que s'ha mostrat
+
+    else:
+        def show_msg():
+            win = tk.Toplevel()
+            win.title("Alarma")
+            win.geometry("360x200")
+            win.resizable(False, False)
+            win.attributes("-topmost", True)
+            win.configure(bg="#f5f5f5")
+            win.protocol("WM_DELETE_WINDOW", lambda: close_alarm(win, codi))
+
+            # Centrem la finestra
+            win.update_idletasks()
+            x = (win.winfo_screenwidth() - win.winfo_width()) // 2
+            y = (win.winfo_screenheight() - win.winfo_height()) // 3
+            win.geometry(f"+{x}+{y}")
+
+            # ─── Capçalera ─────────────────────────────
+            header = tk.Frame(win, bg="#b71c1c")
+            header.pack(fill="x")
+            tk.Label(header, text="⚠ ALARMA", bg="#b71c1c", fg="white", font=("Helvetica", 14, "bold")).pack(padx=10, pady=8)
+
+            # ─── Cos ───────────────────────────────────
+            body = tk.Frame(win, bg="#f5f5f5")
+            body.pack(fill="both", expand=True)
+            tk.Label(body, text=alarma_text, wraplength=320, justify="left", bg="#f5f5f5", fg="#b71c1c", font=("Helvetica", 11, "bold")).pack(padx=15, pady=15)
+            # ─── Botons ────────────────────────────────
+            frame_botons = tk.Frame(body, bg="#f5f5f5")
+            frame_botons.pack(pady=(0, 15))
+
+            #botó ok
+            tk.Button(frame_botons, text="OK", font=("Helvetica", 11, "bold"), relief="flat", bg="#b71c1c", fg="white", activebackground="#8e0000", cursor="hand2", width=8, command=lambda: close_alarm(win, codi)).pack(side="left", padx=6)
+
+
+        window.after(0, show_msg)
+        alarms_shown[codi] = True  # marquem que s'ha mostrat
 
 def close_alarm(win, codi):
     """Tanca la finestra i permet que l'alarma es pugui tornar a mostrar"""
@@ -235,6 +351,7 @@ def Tmax():
         print('La temperatura màxima és:' + fraseHTEntry_Tmax.get())
     except ValueError:
         print("Error: no has introduït un número.")
+        Notificació_Alarma(4)
     add_event("Comanda", f"Tmax configurat a {fraseHTEntry_Tmax.get()}")     #registre d'events
     validar_numero(fraseHTEntry_Tmax)       #alarma sino s'ha entroduint un valor correcte
 
@@ -256,6 +373,7 @@ def Hmax():
         print('La humitat màxima és:' + fraseHTEntry_Hmax.get())
     except ValueError:
         print("Error: no has introduït un número.")
+        Notificació_Alarma(4)
     add_event("Comanda", f"Hmax configurat a {fraseHTEntry_Hmax.get()}")     #registre d'events
     validar_numero(fraseHTEntry_Hmax)       #alarma sino s'ha entroduint un valor correcte
     start_mitjanaH_label(
@@ -327,7 +445,8 @@ def Send_Ordres(Argument, info):
                 i = i+1
 
         if trobat == 0:
-            Notificació_Alarma(4)
+            Notificació_Alarma(7)
+            print("no troba radar a llistaarguments")
             return
         
         if Codi_Argument == 0 or Codi_Argument == 1: # Si el argument == a Stop o Seguir
@@ -368,11 +487,12 @@ def Send_Canvi_Frequencia(Id_Sys, ValorFreq):
                 Missatge_Id_Sys = i
             else:
                 i=i+1
-        
-        missatgefinal = ("2;2;"+str(Missatge_Id_Sys)+";"+str(abs(ValorFreq))+";")   
-        missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal)))
-
-        mySerial.write(missatgefinal.encode('utf-8'))
+        if trobat:
+            missatgefinal = ("2;2;"+str(Missatge_Id_Sys)+";"+str(abs(ValorFreq))+";")   
+            missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal)))
+            mySerial.write(missatgefinal.encode('utf-8'))
+        else:
+            Notificació_Alarma(4)
 
 def Send_Radar(Argument, Valor1, Valor2):
     #                            Estrucutras del missatge 
@@ -387,15 +507,16 @@ def Send_Radar(Argument, Valor1, Valor2):
         while trobat == 0 and i < len(llista_Arguments_Radar):
             if llista_Arguments_Radar[i] == Argument:
                 Codi_Argument = i
+                trobat = 1
             else:
                 i = i+1
-
-        if trobat == 1:
+        if trobat:
             if Codi_Argument == 0 or Codi_Argument == 2: #Canvi velocitat o bé moure a x lloc
                 Valor1_Missatge = Valor1
                 missatgefinal = ("3;"+str(Codi_Argument)+";"+str(Valor1_Missatge)+";")
 
             if Codi_Argument == 1: # El cas de lock que nescesita dos valors 
+                Valor1_Missatge = Valor1
                 Valor2_Missatge = Valor2
 
                 missatgefinal = ("3;"+str(Codi_Argument)+";"+str(Valor1_Missatge)+";"+str(Valor2_Missatge)+";")
@@ -407,10 +528,10 @@ def Send_Radar(Argument, Valor1, Valor2):
             
             mySerial.write(missatgefinal.encode('utf-8'))
             mySerial.write("\n".encode('utf-8'))
-        else:
-            Notificació_Alarma(4)
-            return
-        
+        else: 
+            Notificació_Alarma(7) #Error de sintaxi
+
+
 
 
 def Send_Mitjanes_Arduino(Argument, Valor1): #Aquesta funció serveix nomès pq les mitjanes les faci l'arduino. No serveix perque les mitjanes siguin fetes a la Ground Station
@@ -866,7 +987,7 @@ combo_accions.set("Selecciona acció")
 combo_accions.grid(row=0, column=0, padx=5, pady=5, sticky=E+W)
 
 # --- DESPLEGABLE ARGUMENTS (10 opcions) ---
-opcions_arguments = ["Stop","Start","Freqüència","Velocitat","Lock","Moure","Satèl.lit","Estació de terra"]
+opcions_arguments = ["Stop","Seguir","Freqüència", "Escombreig", "Velocitat","Lock","Moure","Satèl.lit","Estació de terra"]
 combo_arguments = ttk.Combobox(manual_cmd_frame, values=opcions_arguments, state="readonly", font=("Arial", 12))
 combo_arguments.set("Selecciona argument")
 combo_arguments.grid(row=0, column=1, padx=5, pady=5, sticky=E+W)
@@ -882,43 +1003,48 @@ entry_valor2.grid(row=0, column=3, padx=5, pady=5, sticky=E+W)
 
 # --- BOTÓ D’ENVIAR ---
 def enviar_comanda_manual():
-    accio = combo_accions.get()
-    argument = combo_arguments.get()
+    accio = combo_accions.get().lower()
+    argument = combo_arguments.get().lower()
     v1 = entry_valor1.get().lower()
     v2 = entry_valor2.get().lower()
     
     try:
-        if accio == "Ordres":
-            if argument == "Freqüència":
+        if accio == "ordres":
+            if argument == "freqüència":
                 Send_Canvi_Frequencia(v1, int(v2))
                 add_event("Ordre", f"Canvi de freqüència: {v1}, {v2}")
             else: #Start i stop
-                Send_Ordres(argument.lower(),v1.lower())
+                print(argument)
+                Send_Ordres(argument,v1)
                 add_event("Ordre", f"Ordre manual: {argument.lower()} {v1.lower()}")
                 
 
-        elif accio == "Radar":
-            if argument == "Lock":
+        elif accio == "radar":
+            if argument == "lock":
                 Send_Radar(argument, int(v1), int(v2))
                 add_event("Radar", f"Radar Lock: {v1}, {v2}")
-            elif argument == "Moure":
+            elif argument == "moure":
                 Send_Radar(argument, abs(int(v1)),0)
                 add_event("Radar", f"Moviment: {v1}")
-            elif argument == "Velocitat":
+            elif argument == "velocitat":
                 Send_Radar(argument, abs(int(v1)),0)
                 add_event("Radar", f"Canvi de velocitat: {v1}")
 
-        elif accio == "Mitjanes":
-            if argument == "Satèl.lit":
+        elif accio == "mitjanes":
+            if argument == "satèl.lit":
                 print ("sat")
                 MitjanesArduinoTkinterFriendly()
                 add_event("Mitjanes", f"Satèl.lit")
-            elif argument == "Estació de terra":
+            elif argument == "estació de terra":
                 add_event("Mitjanes", f"Estació de terra")
                 activar_mitjanes_EstTerra(argument, 1)
 
-    except ValueError or UnboundLocalError or TypeError: # Tant ValueError com UnboundLocalError són codis d'error que surten quant es crida una variable introduïnt uns paràmetres per els quals la variable no està preparada. És a dir, mostra els errors a l'hora de cirdar funcions
-        Notificació_Alarma(4) #Error de sintaxi
+    except ValueError:    # Tant ValueError com UnboundLocalError són codis d'error que surten quant es crida una variable introduïnt uns paràmetres per els quals la variable no està preparada. És a dir, mostra els errors a l'hora de cirdar funcions
+        Notificació_Alarma(7) #Error de sintaxi
+    except UnboundLocalError:
+        Notificació_Alarma(7) #Error de sintaxi
+    except TypeError:
+        Notificació_Alarma(7) #Error de sintaxi
 
 
 
@@ -1059,7 +1185,7 @@ def recepcion():
                         Notificació_Alarma(3);    
                 else:
                     print("ERROR: Falten arguments en el missatge")
-                    Notificació_Alarma(3)   
+                    #Notificació_Alarma(3)   
                     
         else: 
             with data_lock: #No acabo d'entendre perque fem servir el thread.lock() si la variable que accedim no es compartida ni s'edita enlloc més
