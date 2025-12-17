@@ -23,7 +23,7 @@ unsigned long tiempoAlarma = 5000;
 long UltimaLectura[3] = {0, 0, 0};      // Temp, Hum, Dist
 int Alarmes[3] = {0, 0, 0};             //Temp Hum Dist
 int EstatFuncionamentSistemes[6] = {1, 1, 1, 1, 1, 0}; 
-int PeriodeEmisioDelsSistemes[5] = {500, 500, 500, 500, 2000}; //Temp hum radar alarmes  all
+int PeriodeEmisioDelsSistemes[5] = {500, 500, 500, 500, 5000}; //Temp hum radar alarmes  all
 
 unsigned long NextMillis[5] = {0, 0, 0, 0, 0}; //Temp hum radar alarmes escombreig all
 int NumeroValorsMitjanes[3] = {1, 1, 1};
@@ -231,18 +231,18 @@ void MoureMotor() {
       myStepper.step(Sentit * llargadaSteps);
       pos += Sentit * llargadaSteps;
 
-    }else if (modeRadar == 2 ){ //Lock
+    }else if (modeRadar == 1 ){ //Lock
       int anglemax = posiciointroduida + angleBusqueda/2;
       int anglemin = posiciointroduida - angleBusqueda/2;
-    
+      Serial.println("Min: " + String(anglemin) + "   Pos: " + String(pos) +"   Max: " +String(anglemax));
       if (pos <= anglemin){
         Sentit = 1;
       }
       else if (pos >= anglemax){
         Sentit = -1;
       }
-      myStepper.step(Sentit * llargadaSteps);
-      pos += Sentit * llargadaSteps;
+      myStepper.step(Sentit * llargadaSteps*6);
+      pos += Sentit * llargadaSteps*6;
 
 
     } else {//MoureA

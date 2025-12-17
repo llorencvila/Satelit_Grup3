@@ -65,6 +65,6 @@ void loop(){
   digitalWrite(laser, HIGH);
   Serial.print("\n");
   Serial.println("-IDLE-");
-  delay(5000);
+  delay(3000);
 
 }

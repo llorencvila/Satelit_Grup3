@@ -18,7 +18,7 @@ import tkinter as tk
 from matplotlib.animation import FuncAnimation
 from matplotlib.figure import Figure
 
-Debug_RecepcioSimulada = False #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
+Debug_RecepcioSimulada = True #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
                               #És d'utilitat per fer proves amb el codi si no es disposa del maquinari físic (els dos arduinos)
 
 # ───────────────────────────────────────────────
@@ -408,7 +408,7 @@ def Send_Radar(Argument, Valor1, Valor2):
             mySerial.write(missatgefinal.encode('utf-8'))
             mySerial.write("\n".encode('utf-8'))
         else:
-            Notificació_Alarma(3)
+            Notificació_Alarma(4)
             return
         
 

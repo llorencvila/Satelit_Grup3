@@ -37,19 +37,19 @@ void loop() {
   }
   myStepper.step(Sentit * 10);
   pos = pos + (Sentit*10);
-
+/*
   if (millis() >=NextMillis){
     int dist = ping(TriggerPin,EchoPin);
   NextMillis = millis()+interval;
   //PART DEBUG
   Serial.print("Dist: ");
   Serial.println(dist);
+  */
   Serial.print("Pos: ");
   Serial.println(pos);
-      }
+    //  }
 
-  delay(50);
-
+  delay(5);
 
 }
 int ping(int TriggerPin, int EchoPin) {
