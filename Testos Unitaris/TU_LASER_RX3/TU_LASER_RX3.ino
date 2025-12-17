@@ -7,7 +7,7 @@ const float umbralDetecio = 1.25; //Es considerarà com a detecció quan els val
 int BaudRate = 500;
 int EstatMissatge = 0; //0=Idle | 1=Startbit | 2=LlegintMissatge
 
-int UmbralIdle =2500;
+int UmbralIdle =2000;
 int UmbralLDR = -1;
 int LastIsidle = 0;
 int IsIdleNow = 0;
@@ -15,6 +15,7 @@ int IsIdleNow = 0;
 int TempsRebuda;
 int TempsRebudaStartbit;
 int nextMillis = 0;
+int TDetecioIdle;
 
 int missatge[8]; 
 int LlargadaMissatge = 0;
@@ -58,62 +59,42 @@ void calibracio(){
 
 
 
-int CanviEstat(int Vi, int Vf, int TempsRebuda){ //Valor inicial i valor final
+int CanviEstat(int Vi, int Vf){ //Valor inicial i valor final
   //El Vf mai es farà servir, tot i aixo el deixo perque crec que dona claredat a l'hoara de cridar la funció
   
   if (Vi == 0){
     if (lastInput<UmbralLDR && input>UmbralLDR){ //0->1
+      TempsRebuda = millis();
       digitalWrite(LedMirall,HIGH);
-      if (TempsRebuda){
-        TempsRebuda = millis();
-      }
+
+  
       return 1;
     }
   }else if(Vi == 1) {
     if (lastInput>UmbralLDR && input<UmbralLDR){ //1->0
+       TempsRebuda = millis();
       digitalWrite(LedMirall,LOW);
-      if (TempsRebuda){
-        TempsRebuda = millis();
-      }
       return 1;
     }
   }
 }
 
-int IsIdle(){
-  CanviEstat(0,1,1);
-  if ((millis()-TempsRebuda)>UmbralIdle){
-    digitalWrite(LedMissatge,LOW);
-    return 1;
-  }
-}
-
-int IsStartBit(){
-  LastIsidle = IsIdleNow;
-  IsIdleNow = IsIdle();
-
-  if (LastIsidle == 1 && CanviEstat(1,0) == 1){ //1->0  //Si abans estava en idle i ara hi hi ha un canvi a low
-    TempsRebudaStartbit = millis();
-    digitalWrite(LedMissatge,HIGH);
-    EstatMissatge = 1;
-    return 1;
-  } else{
-    return 0;
-  }
-}
-
 void LlegirStartBit(){
-      if (CanviEstat(0,1)){
-        int deltaT = millis() - TempsRebudaStartbit;
-        if (deltaT <= BaudRate){
-          BaudRate = deltaT;
-          EstatMissatge = 2;
-
-        }else{ //En cas contrari vol dir que la hem feta grossa
-          EstatMissatge = 0; //Encara no se ben be que fer amb aquesta variable
-        }
-      }
+  if (CanviEstat(1,0)){
+    TempsRebudaStartbit = millis();
+    Serial.println("Rebem Inici StartBit");
   }
+  if (CanviEstat(0,1)){
+    int deltaT = millis() - TempsRebudaStartbit;
+    if (deltaT <= BaudRate) {
+      BaudRate = deltaT;
+      EstatMissatge = 2; //Tot Apunt per poder llegir el missatge
+      Serial.println("Rebem Final StartBit");
+    } else{ //Això vol dir que la hem feta grossa
+      EstatMissatge = 0
+    }
+  }
+}
 
 void AfegirAlMissatge(int ValorAAfegir){
   missatge[LlargadaMissatge+1] = ValorAAfegir;
@@ -128,7 +109,7 @@ void AfegirAlMissatge(int ValorAAfegir){
 
   LlargadaMissatge++;
   if (LlargadaMissatge > 8){
-    EstatMissatge = 1; //Ja s'han detectat tots els valors que nescesitem
+    EstatMissatge = 0; //Ja s'han detectat tots els valors que nescesitem
   }
 
 }
@@ -170,18 +151,24 @@ void setup() {
 }
 
 void loop() {
-  Serial.println(IsStartBit());
   lastInput = input;
   input = analogRead(LDRPin);
 
-  if (IsStartBit() == 1){
-    //Començem la lectura
+  if (EstatMissatge == 0){
+    if (CanviEstat(0,1)){
+      TDetecioIdle = millis()+UmbralIdle;
+    }
+    if (millis() >= TDetecioIdle){
+      EstatMissatge = 1;
+      Serial.println("----IDLE----");
+    }
+  }
+  if (EstatMissatge == 1){ //Toca Llegir el statBit
     LlegirStartBit();
   }
-  if (EstatMissatge == 3){
-    //És hora de llegir
+  if (EstatMissatge == 2){
+    Serial.println("Llegint Missatge");
     LlegirMissatge();
   }
-
 
 }
