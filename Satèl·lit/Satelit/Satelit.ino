@@ -29,7 +29,7 @@ unsigned long NextMillis[5] = {0, 0, 0, 0, 0}; //Temp hum radar alarmes escombre
 int NumeroValorsMitjanes[3] = {1, 1, 1};
 
 int ElementsUltimMissatge[5] = {0, 0, 0, 0, 0}; //Accio Arg V1 V2 Checksum
-
+int modeRadar = 0; // 0 = Escombreig | 1 = lock | 2 = MoureA
 // ----- Motor pas a pas -----
 #define OUTPUT1   7   
 #define OUTPUT2   6   
@@ -41,10 +41,10 @@ int VelMotor = 5;
 int pos = 0;
 int Sentit = 1;
 int llargadaSteps = 1;
+int posiciointroduida = 0;
+int angleBusqueda = 0;
 
 Stepper myStepper(stepsPerRotation, OUTPUT1, OUTPUT3, OUTPUT2, OUTPUT4);
-
-Posiciointorduida = 0;
 
 // ----- Sensor ultrasons -----
 const int EchoPin = 9;
@@ -112,8 +112,8 @@ void updateBuffers(float temp, float hum) {
 
     if (tempIndex == 0) tempFilled = true;
     if (humIndex == 0) humFilled = true;
-}
-
+  }
+//
 float mitjanaTemp() {
   if (EstatFuncionamentSistemes[5] == 1){
     int n = tempFilled ? BUFFER_SIZE : tempIndex;
@@ -123,8 +123,8 @@ float mitjanaTemp() {
     return mitjana;
   }
   return 0;
-}
-
+  }
+//
 float mitjanaHum() {
   if (EstatFuncionamentSistemes[5] == 1){
     int n = humFilled ? BUFFER_SIZE : humIndex;
@@ -134,8 +134,8 @@ float mitjanaHum() {
     return mitjana;
   }
   return 0;
-}
-
+  }
+//
 int CheckSum(String missatge) {
   int llargada = missatge.length();
   int sum = 0;// 10; //Comença des de 10 pq en ascii 10 = '\n' <- Com que a la recepció agafem tot el missatge fins al chechsum, el salt de línea no el interpretem
@@ -144,8 +144,8 @@ int CheckSum(String missatge) {
     sum =sum + int(missatge.charAt(i));
   }
   return sum;
-}
-
+  }
+//
 // ===============================================================
 // LECTURES SENSORS
 // ===============================================================
@@ -166,8 +166,8 @@ float GetTemp() {
       }
   }
   return 0;
-}
-
+  }
+//
 float GetHum() {
   if (millis() >= NextMillis[1] && EstatFuncionamentSistemes[1] == 1) {
 
@@ -186,8 +186,8 @@ float GetHum() {
 
   return 0;
   }
-}
-
+  }
+//
 int GetDist() {
   if (millis() >= NextMillis[2] && EstatFuncionamentSistemes[2] == 1) {
 
@@ -213,22 +213,43 @@ int GetDist() {
     return distCm;
   }
   return 0;
-}
+  }
+//
 
 // ===============================================================
 // MOTOR
 // ===============================================================
-void MoureMotor(int incrementposicio) {
+void MoureMotor() {
   if (EstatFuncionamentSistemes[4] == 1) {
-    if (incementposicio == 0){
-      if (pos <= 0) Sentit = 1;
-      else if (pos >= stepsPerRotation) Sentit = -1;
+    if (modeRadar == 0){ //Escombreig
+      if (pos <= 0){
+        Sentit = 1;
+      }
+      else if (pos >= stepsPerRotation){
+        Sentit = -1;
+      }
       myStepper.step(Sentit * llargadaSteps);
       pos += Sentit * llargadaSteps;
 
-    }else{
-      myStepper.step(incrementposicio);
-      pos = incrementposicio;
+    }else if (modeRadar == 2 ){ //Lock
+      int anglemax = posiciointroduida + angleBusqueda/2;
+      int anglemin = posiciointroduida - angleBusqueda/2;
+    
+      if (pos <= anglemin){
+        Sentit = 1;
+      }
+      else if (pos >= anglemax){
+        Sentit = -1;
+      }
+      myStepper.step(Sentit * llargadaSteps);
+      pos += Sentit * llargadaSteps;
+
+
+    } else {//MoureA
+      if(pos != posiciointroduida){
+        int incrementposicio = pos - posiciointroduida;
+        myStepper.step(incrementposicio);
+        }
     }
   }
 }
@@ -256,9 +277,8 @@ void simulate_orbit(unsigned long millisTime, double inclination, int ecef) {
     RetornSymOrbit[2] = y;
     RetornSymOrbit[3] = z;
 
-}
-
-
+  }
+//
 // ===============================================================
 // TELEMETRIA
 // ===============================================================
@@ -314,8 +334,8 @@ void SendObservacions() {
 
 
   
-}
-
+ }
+//
 void SendAlarm(int argument) {
   if (argument >= 0 && argument <= 2) {
     String missatge; 
@@ -326,7 +346,8 @@ void SendAlarm(int argument) {
 
     mySerial.println(missatge);
   }
-}
+  }
+//
 
 // ===============================================================
 // PARSING DE MISSATGES
@@ -398,15 +419,21 @@ void GetInfo() {
   if (Accio == 3){
 
     if (Argument == 0){
+      modeRadar = 0;
       llargadaSteps == ElementsUltimMissatge[2];
+      Serial.println("CanviVel");
       //Realment canviem la llargada del cada desplaçament, és així pq la velocitat real del motor ja és la maxima de per si per tal de que no es cali
       
     }else if (Argument == 1){
+      Serial.println("LOCK");
+      modeRadar = 1;
+      posiciointroduida = ElementsUltimMissatge[2];
+      angleBusqueda = ElementsUltimMissatge[3];
       //CODI LOCK
     } else if (Argument == 2){
+      Serial.println("VES A");
+      modeRadar = 2;
       posiciointroduida = ElementsUltimMissatge[2];
-      incrementposicio = pos - posiciointroduida;
-      MoureMotor(incrementposicio);
     }
 
     }

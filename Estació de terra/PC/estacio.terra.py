@@ -18,14 +18,14 @@ import tkinter as tk
 from matplotlib.animation import FuncAnimation
 from matplotlib.figure import Figure
 
-Debug_RecepcioSimulada = True #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
+Debug_RecepcioSimulada = False #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
                               #És d'utilitat per fer proves amb el codi si no es disposa del maquinari físic (els dos arduinos)
 
 # ───────────────────────────────────────────────
 # CONFIGURACIÓ DEL PORT SÈRIE 
 # ───────────────────────────────────────────────
 if Debug_RecepcioSimulada == False:
-    device = 'COM7'
+    device = 'COM11'
     mySerial = serial.Serial(device, 9600)
     print("funcionant:")
 
@@ -55,9 +55,11 @@ alarms_shown = {}  # clau = codi alarma, valor = True si ja s'ha mostrat
 contact = []
 parametres = 4
 Llista_Arguments_Ordres = ["stop", "seguir", "freq"]
-llista_Arguments_Radar = ["vel", "lock", "moure", "escombreig"]
+llista_Arguments_Radar = ["Velocitat", "Lock", "Moure", "escombreig"]
 llista_Id_sys = ["temp", "hum", "radar", "alarmes", "all"]
 noms_alarmes = ["Temperatura", "Humitat", "Distancia", "Perduda Conexió", "Error de sintaxi","Temperatura màxima superada","Humitat màxima superada"]
+
+
 
 
 R_EARTH = 6371000  # radi de la Terra en metres
@@ -384,27 +386,31 @@ def Send_Radar(Argument, Valor1, Valor2):
         i = 0
         while trobat == 0 and i < len(llista_Arguments_Radar):
             if llista_Arguments_Radar[i] == Argument:
-                Codi_Argument = Argument
+                Codi_Argument = i
             else:
                 i = i+1
 
+        if trobat == 1:
+            if Codi_Argument == 0 or Codi_Argument == 2: #Canvi velocitat o bé moure a x lloc
+                Valor1_Missatge = Valor1
+                missatgefinal = ("3;"+str(Codi_Argument)+";"+str(Valor1_Missatge)+";")
+
+            if Codi_Argument == 1: # El cas de lock que nescesita dos valors 
+                Valor2_Missatge = Valor2
+
+                missatgefinal = ("3;"+str(Codi_Argument)+";"+str(Valor1_Missatge)+";"+str(Valor2_Missatge)+";")
+
+            if Codi_Argument == 3: #En cas que sigui escombreig
+                missatgefinal = ("3;"+str(Codi_Argument)+";")
+
+            missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal)))
+            
+            mySerial.write(missatgefinal.encode('utf-8'))
+            mySerial.write("\n".encode('utf-8'))
+        else:
+            Notificació_Alarma(3)
+            return
         
-        if Codi_Argument == 0 or Codi_Argument == 2: #Canvi velocitat o bé moure a x lloc
-            Valor1_Missatge = Valor1
-            missatgefinal = ("3;"+str(Codi_Argument)+";"+str(Valor1_Missatge)+";")
-
-        if Codi_Argument == 1: # El cas de lock que nescesita dos valors 
-            Valor2_Missatge = Valor2
-
-            missatgefinal = ("3;"+str(Codi_Argument)+";"+str(Valor1_Missatge)+";"+str(Valor2_Missatge)+";")
-
-        if Codi_Argument == 3: #En cas que sigui escombreig
-            missatgefinal = ("3;"+str(Codi_Argument)+";")
-
-        missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal)))
-        
-        mySerial.write(missatgefinal.encode('utf-8'))
-        mySerial.write("\n".encode('utf-8'))
 
 
 def Send_Mitjanes_Arduino(Argument, Valor1): #Aquesta funció serveix nomès pq les mitjanes les faci l'arduino. No serveix perque les mitjanes siguin fetes a la Ground Station
