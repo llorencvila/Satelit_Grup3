@@ -74,6 +74,15 @@ Adicionalment, per adreçar-se als diferents sistemes es fa servir el conjunt d'
 
 # Entregues
 
+## 4ª Entrega
+### Funcionalitats extres:
+- Implementació de la gràfica 3D i el botó que canvia entre gràfiques.
+- Implementació i funcionament de les comandes manuals.
+- Explicació de l'ús de les comandes manuals a través del messagebox de l'alarma.
+- Comunicacions per làser.
+  
+### Video 4ª Entrega
+
 ## 3ª Entrega
 ![Imatge del muntatge de la versió 3](https://github.com/llorencvila/Satelit_Grup3/blob/main/ImatgeMuntatgeVersi%C3%B33.jpg)
 
