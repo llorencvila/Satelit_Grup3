@@ -18,7 +18,7 @@ import tkinter as tk
 from matplotlib.animation import FuncAnimation
 from matplotlib.figure import Figure
 
-Debug_RecepcioSimulada = False #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
+Debug_RecepcioSimulada = True #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
                               #És d'utilitat per fer proves amb el codi si no es disposa del maquinari físic (els dos arduinos)
 
 # ───────────────────────────────────────────────
@@ -57,7 +57,7 @@ parametres = 4
 Llista_Arguments_Ordres = ["stop", "seguir", "freq"]
 llista_Arguments_Radar = ["velocitat", "lock", "moure", "escombreig"]
 llista_Id_sys = ["temp", "hum", "radar", "alarmes", "all"]
-noms_alarmes = ["Temperatura", "Humitat", "Distancia", "Perduda Conexió", "Error de sintaxi","Temperatura màxima superada","Humitat màxima superada"]
+noms_alarmes = ["Temperatura", "Humitat", "Distancia", "Perduda Conexió", "Error de sintaxi","Temperatura màxima superada","Humitat màxima superada","Error de sintaxi (comanda manual)"]
 
 
 R_EARTH = 6371000  # radi de la Terra en metres
@@ -124,7 +124,7 @@ def Notificació_Alarma(codi):
     if alarms_shown.get(codi, False):
         return
     
-    if codi == 7:
+    elif codi == 7:
         def show_msg7():
             print("dins la funicó d'alarma 7")
             win = tk.Toplevel()
@@ -192,7 +192,7 @@ def Notificació_Alarma(codi):
 
             txt.insert(
                 "1.0",
-                "EXPLICACIÓ DE L'ESQUEMA\n\n"
+                "---EXPLICACIÓ DE L'ESQUEMA---\n\n"
                 "Posicions al frame de comanda manual:\n"
                 "  - Primera posició\n"
                 "    - Segona posició\n"
@@ -204,7 +204,7 @@ def Notificació_Alarma(codi):
                 "  · radar\n"
                 "  · alarmes\n"
                 "  · all (tots els sistemes)\n\n"
-                "SINTAXI ADEQUADA:\n\n"
+                "---SINTAXI ADEQUADA---\n\n"
                 "ORDRES:\n"
                 "  - Stop\n"
                 "    - Sistema\n"
@@ -364,8 +364,6 @@ def Tmax():
     column=0
     )
 
-
-
 def Hmax():
     global Hmax_val
     try:
@@ -376,14 +374,7 @@ def Hmax():
         Notificació_Alarma(4)
     add_event("Comanda", f"Hmax configurat a {fraseHTEntry_Hmax.get()}")     #registre d'events
     validar_numero(fraseHTEntry_Hmax)       #alarma sino s'ha entroduint un valor correcte
-    start_mitjanaH_label(
-    histH,
-    data_lock,
-    parent_widget=button_HT_frame,
-    interval=0.5,
-    row=5,
-    column=0
-    )
+    start_mitjanaH_label(histH, data_lock, parent_widget=button_HT_frame, interval=0.5, row=5, column=0)
 
 def activar_mitjanes_EstTerra():
     
@@ -397,7 +388,6 @@ def activar_mitjanes_EstTerra():
     stopCalc = False
     mitjanes_EstTerra()
     add_event("Comanda", "Mitjanes Estació de terra")     #registre d'events
-
 
 def mitjanes_EstTerra(): #NOMÉS ES CALCULEN LES MITJANES QUAN ES CTRIDA LA FUNCIÓ A TRAVÉS DE LA FUNCIÓ ANTERIOR, SÓN LES MITJANES CALCULADES PER L'ESTACIÓ DE TERRA 
     global thread_mitjanaT, thread_mitjanaH
@@ -425,9 +415,7 @@ def mitjanes_EstTerra(): #NOMÉS ES CALCULEN LES MITJANES QUAN ES CTRIDA LA FUNC
     
     else:    
         return
-
-    
-    
+  
 #Realment, les funcions seguents es podrien ajuntar en una de sola, de moment s'ha optat per deixar-ho aixi perque pot resultar més entenedor. En un futur es poden ajuntar.
 
 def Send_Ordres(Argument, info):
@@ -471,7 +459,6 @@ def Send_Ordres(Argument, info):
         add_event("Comanda", f"Enviada ordre: {Argument} -> {info}")
     except Exception:
         pass
-
 
 def Send_Canvi_Frequencia(Id_Sys, ValorFreq):
     #Estrucutra del missatge 
@@ -530,9 +517,6 @@ def Send_Radar(Argument, Valor1, Valor2):
             mySerial.write("\n".encode('utf-8'))
         else: 
             Notificació_Alarma(7) #Error de sintaxi
-
-
-
 
 def Send_Mitjanes_Arduino(Argument, Valor1): #Aquesta funció serveix nomès pq les mitjanes les faci l'arduino. No serveix perque les mitjanes siguin fetes a la Ground Station
     #                            Estrucutra del missatge 
@@ -594,7 +578,6 @@ def canvi_periodedist():
     Send_Canvi_Frequencia("dist", frase_distEntry.get())
     add_event("Comanda", f"Canvi període distància a {frase_distEntry.get()}")     #registre d'events
     validar_numero(frase_distEntry)       #alarma sino s'ha entroduint un valor correcte
-
 
 # ───────────────────────────────────────────────
 # FUNCIONS REGISTRE D'EVENTS
@@ -680,9 +663,6 @@ def add_event(tipo, description, dt=None, persist=True):
     except Exception:
         pass
 
-
-
-    
 # ───────────────────────────────────────────────
 # FINESTRA PRINCIPAL TKINTER
 # ───────────────────────────────────────────────
@@ -1013,10 +993,12 @@ def enviar_comanda_manual():
             if argument == "freqüència":
                 Send_Canvi_Frequencia(v1, int(v2))
                 add_event("Ordre", f"Canvi de freqüència: {v1}, {v2}")
-            else: #Start i stop
+            elif argument == "seguir" or argument == "stop":
                 print(argument)
                 Send_Ordres(argument,v1)
                 add_event("Ordre", f"Ordre manual: {argument.lower()} {v1.lower()}")
+            else:
+                Notificació_Alarma(7)
                 
 
         elif accio == "radar":
@@ -1029,6 +1011,8 @@ def enviar_comanda_manual():
             elif argument == "velocitat":
                 Send_Radar(argument, abs(int(v1)),0)
                 add_event("Radar", f"Canvi de velocitat: {v1}")
+            else:
+                Notificació_Alarma(7)
 
         elif accio == "mitjanes":
             if argument == "satèl.lit":
@@ -1038,6 +1022,11 @@ def enviar_comanda_manual():
             elif argument == "estació de terra":
                 add_event("Mitjanes", f"Estació de terra")
                 activar_mitjanes_EstTerra(argument, 1)
+            else:
+                Notificació_Alarma(7)
+
+        else:
+            Notificació_Alarma(7)
 
     except ValueError:    # Tant ValueError com UnboundLocalError són codis d'error que surten quant es crida una variable introduïnt uns paràmetres per els quals la variable no està preparada. És a dir, mostra els errors a l'hora de cirdar funcions
         Notificació_Alarma(7) #Error de sintaxi
@@ -1259,7 +1248,6 @@ def actualitzar_graficaHT():
     except Exception as e:
         print("ERROR a actualitzar_graficaHT:", e)
 
-
 # ───────────────────────────────────────────────
 # CÀLCUL DE MITJANA DE TEMPERATURES 
 # ───────────────────────────────────────────────
@@ -1411,8 +1399,6 @@ def actualitzar_grafica_radar():
     except Exception as e:
         print("ERROR a actualitzar_grafica_radar:", e)
 
-
-
 # ───────────────────────────────────────────────────────────────
 # FUNCIÓ PER ACTUALITZAR LA GRÀFICA DE SIMULACIÓ DE L'ÒRBITA 2D
 # ───────────────────────────────────────────────────────────────
@@ -1537,7 +1523,6 @@ orbit3d = OrbitPlot3D(graf_orbita_frame)
 orbit3d.canvas.get_tk_widget().grid_remove()
 
     
-
 # ───────────────────────────────────────────────
 # LLANÇAR FIL I INICIAR GUI
 # ───────────────────────────────────────────────
@@ -1551,8 +1536,6 @@ window.after(50, actualitzar_graficaHT)
 window.after(200, actualitzar_grafica_radar)
 window.after(200, update_orbit2D)
 window.after(200, update_orbit3D)
-
-
 
 
 def on_close():
