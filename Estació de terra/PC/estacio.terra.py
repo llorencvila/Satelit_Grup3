@@ -18,14 +18,14 @@ import tkinter as tk
 from matplotlib.animation import FuncAnimation
 from matplotlib.figure import Figure
 
-Debug_RecepcioSimulada = True #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
+Debug_RecepcioSimulada = False #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
                               #És d'utilitat per fer proves amb el codi si no es disposa del maquinari físic (els dos arduinos)
 
 # ───────────────────────────────────────────────
 # CONFIGURACIÓ DEL PORT SÈRIE 
 # ───────────────────────────────────────────────
 if Debug_RecepcioSimulada == False:
-    device = 'COM7'
+    device = 'COM11'
     mySerial = serial.Serial(device, 9600)
     print("funcionant:")
 
@@ -56,8 +56,8 @@ contact = []
 parametres = 4
 Llista_Arguments_Ordres = ["stop", "seguir", "freq"]
 llista_Arguments_Radar = ["velocitat", "lock", "moure", "escombreig"]
-llista_Id_sys = ["temp", "hum", "radar", "alarmes", "all"]
-noms_alarmes = ["Temperatura", "Humitat", "Distancia", "Perduda Conexió", "Error de sintaxi","Temperatura màxima superada","Humitat màxima superada","Error de sintaxi (comanda manual)"]
+llista_Id_sys = ["temp", "hum", "radar", "alarmes", "all", "laser"]
+noms_alarmes = ["Temperatura", "Humitat", "Distancia", "Perduda Conexió", "Error de sintaxi","Temperatura màxima superada","Humitat màxima superada","Error de sintaxi (comanda manual)", "Comunicacions Laser Compromeses"]
 
 
 R_EARTH = 6371000  # radi de la Terra en metres
@@ -274,7 +274,6 @@ def close_alarm(win, codi):
     alarms_shown[codi] = False
     win.destroy()
 
-
 def validar_numero(entry_widget):
     try:
         return float(entry_widget.get())
@@ -446,15 +445,17 @@ def Send_Ordres(Argument, info):
                     Info_Missatge = i
                 else:
                     i=i+1
-        
-        missatgefinal = ("2;"+str(Codi_Argument)+";"+str(Info_Missatge)+";")
+        try:
+            missatgefinal = ("2;"+str(Codi_Argument)+";"+str(Info_Missatge)+";")
 
-        print(missatgefinal)
+            print(missatgefinal)
 
-        missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal)))
-        mySerial.write(missatgefinal.encode('utf-8'))
-        mySerial.write("\n".encode('utf-8'))
-            # Després d'enviar pel serial (o en mode debug), afegim l'event:
+            missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal)))
+            mySerial.write(missatgefinal.encode('utf-8'))
+            mySerial.write("\n".encode('utf-8'))
+                # Després d'enviar pel serial (o en mode debug), afegim l'event:
+        except TypeError :
+            Notificació_Alarma(4)
     try:
         add_event("Comanda", f"Enviada ordre: {Argument} -> {info}")
     except Exception:
@@ -1166,7 +1167,7 @@ def recepcion():
                                 label_mitjanaH_arduino.config(text=f"Mitjana H Arduino: {float(data[4]):.2f} %")
 
                             #ALARMES
-                            elif accio == "1":
+                            elif accio == "1": ##OJUT QUE CAL CAnviar aixó#################################################################################
                                 threadNotificacio = threading.Thread(target=Notificació_Alarma(int(data[0])))
                                 threadNotificacio.start()
                     except IndexError or ValueError or UnboundLocalError:
@@ -1452,14 +1453,12 @@ class GroundStationGUI:
         # Torna a cridar-se cada 200 ms
         self.root.after(200, self.update_plot)
 
-
 def update_orbit3D():
     try:
         orbit3d.update(histCoordx, histCoordy, histCoordz)
         window.after(200, update_orbit3D)
     except Exception as e:
         print("ERROR a update_orbit3D:", e)
-
 
 def draw_earth_3d(ax, radius=R_EARTH):
     u = np.linspace(0, 2 * np.pi, 60)

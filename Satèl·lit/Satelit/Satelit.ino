@@ -22,10 +22,10 @@ unsigned long tiempoAlarma = 5000;
 
 long UltimaLectura[3] = {0, 0, 0};      // Temp, Hum, Dist
 int Alarmes[3] = {0, 0, 0};             //Temp Hum Dist
-int EstatFuncionamentSistemes[6] = {1, 1, 1, 1, 1, 0}; 
-int PeriodeEmisioDelsSistemes[5] = {500, 500, 500, 500, 5000}; //Temp hum radar alarmes  all
+int EstatFuncionamentSistemes[7] = {1, 1, 1, 1, 1, 0, 0};  //temp hum radar alarmes all mitjanes laser
+int PeriodeEmisioDelsSistemes[5] = {500, 500, 500, 500, 2000}; //Temp hum radar alarmes  all
 
-unsigned long NextMillis[5] = {0, 0, 0, 0, 0}; //Temp hum radar alarmes escombreig all
+unsigned long NextMillis[6] = {0, 0, 0, 0, 0, 0}; //Temp hum radar alarmes escombreig all laser
 int NumeroValorsMitjanes[3] = {1, 1, 1};
 
 int ElementsUltimMissatge[5] = {0, 0, 0, 0, 0}; //Accio Arg V1 V2 Checksum
@@ -43,6 +43,13 @@ int Sentit = 1;
 int llargadaSteps = 1;
 int posiciointroduida = 0;
 int angleBusqueda = 0;
+
+int laser = 13;
+int NextTransmisio = 0;
+int BitRate = 500;
+int TempsIdle = 2000;
+int missatge[8] = { 0, 1, 0, 1, 0, 1, 0, 1 };
+
 
 Stepper myStepper(stepsPerRotation, OUTPUT1, OUTPUT3, OUTPUT2, OUTPUT4);
 
@@ -77,7 +84,9 @@ void setup() {
 
   pinMode(TriggerPin, OUTPUT);
   pinMode(EchoPin, INPUT);
+  pinMode(laser,OUTPUT);
 
+  NextTransmisio = millis() + BitRate*8 +TempsIdle;
   dht.begin();
 
   for (int i = 0; i < 5; i++) {
@@ -156,7 +165,7 @@ float GetTemp() {
     NextMillis[0] = millis() + PeriodeEmisioDelsSistemes[0];
 
     if (isnan(t)){
-      Alarmes[0] = 1;
+      SendAlarm(0);
       return 0;
       }
 
@@ -175,7 +184,7 @@ float GetHum() {
     NextMillis[1] = millis() + PeriodeEmisioDelsSistemes[1];
 
     if (isnan(h)){
-      Alarmes[1] = 1;
+      SendAlarm(1);
       return 0;
       }
 
@@ -225,7 +234,7 @@ void MoureMotor() {
       if (pos <= 0){
         Sentit = 1;
       }
-      else if (pos >= stepsPerRotation){
+      else if (pos >= stepsPerRotation/3){
         Sentit = -1;
       }
       myStepper.step(Sentit * llargadaSteps);
@@ -234,7 +243,8 @@ void MoureMotor() {
     }else if (modeRadar == 1 ){ //Lock
       int anglemax = posiciointroduida + angleBusqueda/2;
       int anglemin = posiciointroduida - angleBusqueda/2;
-      Serial.println("Min: " + String(anglemin) + "   Pos: " + String(pos) +"   Max: " +String(anglemax));
+      
+      //Serial.println("Min: " + String(anglemin) + "   Pos: " + String(pos) +"   Max: " +String(anglemax));
       if (pos <= anglemin){
         Sentit = 1;
       }
@@ -404,10 +414,16 @@ void GetInfo() {
     if (Argument == 0){ //Argument -> Stop
       EstatFuncionamentSistemes[ElementsUltimMissatge[2]] = 0;
       Serial.println("Stop");
+      if (ElementsUltimMissatge[2] == 5){
+        digitalWrite(laser,LOW);
+      }
 
     } else if (Argument == 1){ //Argument -> Seguir
       EstatFuncionamentSistemes[ElementsUltimMissatge[2]] = 1;
       Serial.println("Seguir");
+      if (ElementsUltimMissatge[2] == 5){
+        digitalWrite(laser,HIGH);
+      }
 
     } else if (Argument == 2){ //Argument -> Canvi de freq
       PeriodeEmisioDelsSistemes[ElementsUltimMissatge[2]] = ElementsUltimMissatge[3];
@@ -445,6 +461,24 @@ void GetInfo() {
 
 }
 
+void SendMissLaser() {
+  Serial.print("Missatge: ");
+  int i = 0;
+  while (i <= 7) {
+    if (millis() > NextTransmisio) {
+      if (missatge[i] == 0) {
+        digitalWrite(laser, LOW);
+
+      } else if (missatge[i] == 1) {
+        digitalWrite(laser, HIGH);
+      }
+      NextTransmisio = millis() + BitRate;
+      Serial.print(missatge[i]);
+      i++;
+    }
+  }
+  EstatFuncionamentSistemes[6]=0;
+}
 
 // ===============================================================
 // LOOP PRINCIPAL
@@ -453,6 +487,10 @@ void loop() {
 
   MoureMotor();
   GetInfo();
+  if (EstatFuncionamentSistemes[5]==1){
+    SendMissLaser();
+    EstatFuncionamentSistemes[5] =0;
+  }
 
   if (millis() >= NextMillis[4]){ //index 4 = all sistemes
     SendObservacions();
