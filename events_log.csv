@@ -1,0 +1,356 @@
+datetime,type,description
+2025-12-14 14:58:22,Comanda,Enviada ordre: seguir -> temp
+2025-12-14 14:58:22,Comanda,Enviada ordre: seguir -> hum
+2025-12-14 15:00:11,Comanda,Enviada ordre: seguir -> temp
+2025-12-14 15:00:11,Comanda,Enviada ordre: seguir -> hum
+2025-12-14 15:01:50,Comanda,Enviada ordre: seguir -> temp
+2025-12-14 15:01:50,Comanda,Enviada ordre: seguir -> hum
+2025-12-14 15:02:16,Comanda,Enviada ordre: seguir -> temp
+2025-12-14 15:02:16,Comanda,Enviada ordre: seguir -> hum
+2025-12-14 15:02:55,Comanda,Enviada ordre: seguir -> temp
+2025-12-14 15:02:55,Comanda,Enviada ordre: seguir -> hum
+2025-12-14 15:03:01,Comanda,Enviada ordre: stop -> temp
+2025-12-14 15:03:01,Comanda,Enviada ordre: stop -> hum
+2025-12-14 15:03:42,Comanda,Enviada ordre: seguir -> temp
+2025-12-14 15:03:42,Comanda,Enviada ordre: seguir -> hum
+2025-12-14 15:15:10,Alarma,Codi 3: Perduda Conexió
+2025-12-14 15:15:10,Alarma,Codi 3: Perduda Conexió
+2025-12-14 15:15:10,Alarma,Codi 3: Perduda Conexió
+2025-12-14 15:17:47,Alarma,Codi 3: Perduda Conexió
+2025-12-14 15:50:39,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:06:17,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:06:17,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:06:17,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:06:17,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:06:51,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:10:24,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:10:24,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:10:29,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:10:29,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:10:34,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:10:34,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:10:39,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:10:44,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:10:44,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:10:49,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:10:55,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:00,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:00,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:05,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:05,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:10,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:10,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:15,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:15,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:20,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:25,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:26,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:31,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:31,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:36,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:41,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:46,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:51,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:11:56,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:12:01,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:12:07,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:12:58,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:13:57,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:18:36,Alarma,Codi 2: Distancia
+2025-12-14 16:18:58,Alarma,Codi 4: Error de sintaxi
+2025-12-14 16:19:02,Alarma,Codi 4: Error de sintaxi
+2025-12-14 16:19:12,Alarma,Codi 2: Distancia
+2025-12-14 16:19:18,Alarma,Codi 2: Distancia
+2025-12-14 16:19:23,Alarma,Codi 2: Distancia
+2025-12-14 16:19:28,Alarma,Codi 2: Distancia
+2025-12-14 16:19:33,Alarma,Codi 2: Distancia
+2025-12-14 16:19:49,Alarma,Codi 4: Error de sintaxi
+2025-12-14 16:20:14,Alarma,Codi 2: Distancia
+2025-12-14 16:20:19,Alarma,Codi 2: Distancia
+2025-12-14 16:21:05,Alarma,Codi 2: Distancia
+2025-12-14 16:21:31,Alarma,Codi 2: Distancia
+2025-12-14 16:23:40,Alarma,Codi 2: Distancia
+2025-12-14 16:24:57,Alarma,Codi 2: Distancia
+2025-12-14 16:26:11,Alarma,Codi 4: Error de sintaxi
+2025-12-14 16:26:15,Alarma,Codi 4: Error de sintaxi
+2025-12-14 16:26:37,Alarma,Codi 4: Error de sintaxi
+2025-12-14 16:26:40,Alarma,Codi 2: Distancia
+2025-12-14 16:26:45,Alarma,Codi 2: Distancia
+2025-12-14 16:26:50,Alarma,Codi 2: Distancia
+2025-12-14 16:26:55,Alarma,Codi 2: Distancia
+2025-12-14 16:27:00,Alarma,Codi 2: Distancia
+2025-12-14 16:27:05,Alarma,Codi 2: Distancia
+2025-12-14 16:27:31,Alarma,Codi 4: Error de sintaxi
+2025-12-14 16:28:22,Alarma,Codi 2: Distancia
+2025-12-14 16:28:33,Alarma,Codi 2: Distancia
+2025-12-14 16:28:38,Alarma,Codi 2: Distancia
+2025-12-14 16:28:43,Alarma,Codi 2: Distancia
+2025-12-14 16:28:48,Alarma,Codi 2: Distancia
+2025-12-14 16:28:58,Alarma,Codi 2: Distancia
+2025-12-14 16:29:04,Alarma,Codi 2: Distancia
+2025-12-14 16:29:34,Alarma,Codi 2: Distancia
+2025-12-14 16:29:40,Alarma,Codi 2: Distancia
+2025-12-14 16:29:45,Alarma,Codi 2: Distancia
+2025-12-14 16:29:50,Alarma,Codi 2: Distancia
+2025-12-14 16:30:00,Alarma,Codi 2: Distancia
+2025-12-14 16:31:53,Alarma,Codi 2: Distancia
+2025-12-14 16:31:58,Alarma,Codi 4: Error de sintaxi
+2025-12-14 16:31:58,Alarma,Codi 2: Distancia
+2025-12-14 16:32:04,Alarma,Codi 2: Distancia
+2025-12-14 16:32:09,Alarma,Codi 2: Distancia
+2025-12-14 16:32:14,Alarma,Codi 2: Distancia
+2025-12-14 16:32:15,Alarma,Codi 4: Error de sintaxi
+2025-12-14 16:32:17,Alarma,Codi 4: Error de sintaxi
+2025-12-14 16:32:19,Alarma,Codi 2: Distancia
+2025-12-14 16:32:24,Alarma,Codi 2: Distancia
+2025-12-14 16:32:29,Alarma,Codi 2: Distancia
+2025-12-14 16:32:34,Alarma,Codi 2: Distancia
+2025-12-14 16:32:40,Alarma,Codi 2: Distancia
+2025-12-14 16:32:45,Alarma,Codi 2: Distancia
+2025-12-14 16:32:50,Alarma,Codi 2: Distancia
+2025-12-14 16:33:00,Alarma,Codi 2: Distancia
+2025-12-14 16:33:04,Alarma,Codi 4: Error de sintaxi
+2025-12-14 16:33:05,Alarma,Codi 2: Distancia
+2025-12-14 16:33:10,Alarma,Codi 2: Distancia
+2025-12-14 16:34:55,Alarma,Codi 4: Error de sintaxi
+2025-12-14 16:35:31,Comanda,Enviada ordre: stop -> alarmes
+2025-12-14 16:36:59,Comanda,Enviada ordre: stop -> alarmes
+2025-12-14 16:37:01,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:38:38,Comanda,Enviada ordre: stop -> alarmes
+2025-12-14 16:38:40,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:39:19,Comanda,Enviada ordre: stop -> alarmes
+2025-12-14 16:39:21,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:40:06,Comanda,Enviada ordre: stop -> alarmes
+2025-12-14 16:40:46,Comanda,Enviada ordre: stop -> alarmes
+2025-12-14 16:41:57,Comanda,Enviada ordre: stop -> alarmes
+2025-12-14 16:45:28,Comanda,Enviada ordre: stop -> alarmes
+2025-12-14 16:45:30,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:46:12,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:46:13,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:46:13,Alarma,Codi 3: Perduda Conexió
+2025-12-14 16:46:27,Comanda,Enviada ordre: stop -> alarmes
+2025-12-14 16:46:29,Alarma,Codi 3: Perduda Conexió
+2025-12-17 00:17:30,Alarma,Codi 3: Perduda Conexió
+2025-12-17 00:57:37,Alarma,Codi 3: Perduda Conexió
+2025-12-17 00:57:38,Alarma,Codi 3: Perduda Conexió
+2025-12-17 00:58:22,Alarma,Codi 3: Perduda Conexió
+2025-12-17 00:58:23,Alarma,Codi 3: Perduda Conexió
+2025-12-17 18:22:30,Alarma,Codi 2: Distancia
+2025-12-17 18:22:36,Alarma,Codi 2: Distancia
+2025-12-17 18:22:41,Alarma,Codi 2: Distancia
+2025-12-17 18:22:56,Alarma,Codi 2: Distancia
+2025-12-17 18:23:01,Alarma,Codi 2: Distancia
+2025-12-17 18:23:06,Alarma,Codi 2: Distancia
+2025-12-17 18:23:22,Alarma,Codi 2: Distancia
+2025-12-17 18:23:27,Alarma,Codi 2: Distancia
+2025-12-17 18:23:47,Alarma,Codi 2: Distancia
+2025-12-17 18:23:52,Alarma,Codi 2: Distancia
+2025-12-17 18:24:13,Alarma,Codi 2: Distancia
+2025-12-17 18:24:18,Alarma,Codi 2: Distancia
+2025-12-17 18:24:33,Alarma,Codi 2: Distancia
+2025-12-17 18:24:38,Alarma,Codi 2: Distancia
+2025-12-17 18:24:44,Alarma,Codi 2: Distancia
+2025-12-17 18:24:59,Alarma,Codi 2: Distancia
+2025-12-17 18:25:04,Alarma,Codi 2: Distancia
+2025-12-17 18:25:30,Alarma,Codi 2: Distancia
+2025-12-17 18:26:16,Alarma,Codi 2: Distancia
+2025-12-17 18:26:22,Alarma,Codi 2: Distancia
+2025-12-17 18:26:36,Alarma,Codi 2: Distancia
+2025-12-17 18:26:41,Alarma,Codi 2: Distancia
+2025-12-17 18:27:21,Alarma,Codi 2: Distancia
+2025-12-17 18:37:03,Alarma,Codi 2: Distancia
+2025-12-17 18:37:08,Alarma,Codi 2: Distancia
+2025-12-17 18:39:35,Alarma,Codi 2: Distancia
+2025-12-17 18:44:04,Comanda,Mitjanes Satèl·lit
+2025-12-17 18:44:06,Comanda,Mitjanes Satèl·lit
+2025-12-17 18:44:12,Comanda,Mitjanes Estació de terra
+2025-12-17 18:44:16,Comanda,Enviada ordre: seguir -> temp
+2025-12-17 18:44:18,Comanda,Enviada ordre: seguir -> hum
+2025-12-17 18:44:18,Comanda,Enviada ordre: seguir -> temp
+2025-12-17 18:44:18,Comanda,Enviada ordre: seguir -> hum
+2025-12-17 18:44:18,Comanda,Enviada ordre: seguir -> temp
+2025-12-17 18:44:19,Comanda,Enviada ordre: seguir -> hum
+2025-12-17 18:44:19,Comanda,Enviada ordre: seguir -> temp
+2025-12-17 18:44:26,Alarma,Codi 3: Perduda Conexió
+2025-12-17 18:44:26,Comanda,Enviada ordre: seguir -> hum
+2025-12-17 18:48:06,Comanda,Enviada ordre: seguir -> temp
+2025-12-17 18:48:06,Comanda,Enviada ordre: seguir -> hum
+2025-12-17 18:48:10,Comanda,Enviada ordre: seguir -> temp
+2025-12-17 18:48:10,Comanda,Enviada ordre: seguir -> hum
+2025-12-17 18:53:58,Comanda,Enviada ordre: seguir -> temp
+2025-12-17 18:53:58,Comanda,Enviada ordre: seguir -> hum
+2025-12-17 19:00:18,Comanda,Mitjanes Satèl·lit
+2025-12-17 19:00:22,Comanda,Mitjanes Satèl·lit
+2025-12-17 19:00:22,Comanda,Mitjanes Satèl·lit
+2025-12-17 19:00:23,Comanda,Mitjanes Satèl·lit
+2025-12-17 19:01:34,Comanda,Enviada ordre: stop -> temp
+2025-12-17 19:01:34,Comanda,Enviada ordre: stop -> hum
+2025-12-17 19:01:34,Comanda,Enviada ordre: stop -> temp
+2025-12-17 19:01:34,Comanda,Enviada ordre: stop -> hum
+2025-12-17 19:01:34,Comanda,Enviada ordre: stop -> temp
+2025-12-17 19:01:34,Comanda,Enviada ordre: stop -> hum
+2025-12-17 19:01:35,Comanda,Enviada ordre: stop -> temp
+2025-12-17 19:01:35,Comanda,Enviada ordre: stop -> hum
+2025-12-17 19:01:37,Comanda,Enviada ordre: stop -> temp
+2025-12-17 19:01:37,Comanda,Enviada ordre: stop -> hum
+2025-12-17 19:01:38,Alarma,Codi 3: Perduda Conexió
+2025-12-17 19:01:39,Comanda,Enviada ordre: stop -> temp
+2025-12-17 19:01:39,Comanda,Enviada ordre: stop -> hum
+2025-12-17 19:01:40,Comanda,Enviada ordre: stop -> temp
+2025-12-17 19:01:40,Comanda,Enviada ordre: stop -> hum
+2025-12-17 19:01:40,Comanda,Enviada ordre: stop -> temp
+2025-12-17 19:01:40,Comanda,Enviada ordre: stop -> hum
+2025-12-17 19:13:07,Comanda,Enviada ordre: seguir -> temp
+2025-12-17 19:13:07,Comanda,Enviada ordre: seguir -> hum
+2025-12-17 19:13:07,Comanda,Enviada ordre: stop -> temp
+2025-12-17 19:13:07,Comanda,Enviada ordre: stop -> hum
+2025-12-17 19:13:08,Comanda,Enviada ordre: seguir -> temp
+2025-12-17 19:13:08,Comanda,Enviada ordre: seguir -> hum
+2025-12-17 19:15:21,Comanda,Enviada ordre: seguir -> temp
+2025-12-17 19:15:21,Comanda,Enviada ordre: seguir -> hum
+2025-12-17 19:15:22,Comanda,Enviada ordre: stop -> temp
+2025-12-17 19:15:22,Comanda,Enviada ordre: stop -> hum
+2025-12-17 19:15:41,Comanda,Mitjanes Estació de terra
+2025-12-17 19:15:52,Comanda,Enviada ordre: seguir -> radar
+2025-12-17 19:15:53,Comanda,Enviada ordre: stop -> radar
+2025-12-17 19:16:17,Observació,hola
+2025-12-17 19:24:12,Alarma,Codi 4: Error de sintaxi
+2025-12-17 19:24:12,Comanda,Tmax configurat a hmm
+2025-12-17 19:24:12,Alarma,Codi 4: Error de sintaxi
+2025-12-17 19:24:12,Alarma,Error de sintaxi: valor no numèric
+2025-12-17 19:25:05,Alarma,Codi 4: Error de sintaxi
+2025-12-17 19:25:05,Comanda,Tmax configurat a hikj
+2025-12-17 19:25:05,Alarma,Codi 4: Error de sintaxi
+2025-12-17 19:25:05,Alarma,Error de sintaxi: valor no numèric
+2025-12-17 19:25:13,Comanda,Tmax configurat a 7
+2025-12-17 19:25:14,Alarma,Codi 5: Temperatura màxima superada
+2025-12-17 19:25:34,Alarma,Codi 7: Error de sintaxi (comanda manual)
+2025-12-18 06:11:40,Alarma,Codi 7: Error de sintaxi (comanda manual)
+2025-12-18 06:11:51,Radar,"Radar Lock: 1000, 1000"
+2025-12-18 06:12:33,Radar,Moviment: 1000
+2025-12-18 06:14:01,Radar,Moviment: 500
+2025-12-18 06:19:36,Radar,Moviment: 1000
+2025-12-18 06:20:39,Radar,"Radar Lock: 50, 100"
+2025-12-18 06:21:17,Radar,"Radar Lock: 50, 1000"
+2025-12-18 06:24:30,Alarma,Codi 1: Humitat
+2025-12-18 06:24:31,Alarma,Codi 0: Temperatura
+2025-12-18 06:24:33,Alarma,Codi 1: Humitat
+2025-12-18 06:24:35,Alarma,Codi 0: Temperatura
+2025-12-18 06:24:36,Alarma,Codi 1: Humitat
+2025-12-18 06:24:39,Alarma,Codi 0: Temperatura
+2025-12-18 06:24:41,Alarma,Codi 1: Humitat
+2025-12-18 06:24:43,Alarma,Codi 0: Temperatura
+2025-12-18 06:24:48,Alarma,Codi 1: Humitat
+2025-12-18 06:24:50,Alarma,Codi 0: Temperatura
+2025-12-18 06:24:52,Alarma,Codi 1: Humitat
+2025-12-18 06:24:54,Alarma,Codi 0: Temperatura
+2025-12-18 06:25:02,Alarma,Codi 7: Error de sintaxi (comanda manual)
+2025-12-18 06:26:03,Alarma,Codi 7: Error de sintaxi (comanda manual)
+2025-12-18 06:26:25,Alarma,Codi 7: Error de sintaxi (comanda manual)
+2025-12-18 06:26:37,Comanda,Enviada ordre: seguir -> laser
+2025-12-18 06:26:37,Ordre,Ordre manual: seguir laser
+2025-12-18 06:26:45,Comanda,Enviada ordre: seguir -> laser
+2025-12-18 06:26:45,Ordre,Ordre manual: seguir laser
+2025-12-18 06:29:31,Comanda,Enviada ordre: seguir -> laser
+2025-12-18 06:29:31,Ordre,Ordre manual: seguir laser
+2025-12-18 06:29:54,Comanda,Enviada ordre: seguir -> laser
+2025-12-18 06:29:54,Ordre,Ordre manual: seguir laser
+2025-12-18 06:30:02,Comanda,Enviada ordre: stop -> laser
+2025-12-18 06:30:02,Ordre,Ordre manual: stop laser
+2025-12-18 06:31:17,Comanda,Enviada ordre: stop -> laser
+2025-12-18 06:31:17,Ordre,Ordre manual: stop laser
+2025-12-18 06:31:26,Comanda,Enviada ordre: seguir -> laser
+2025-12-18 06:31:26,Ordre,Ordre manual: seguir laser
+2025-12-18 06:31:38,Comanda,Enviada ordre: stop -> laser
+2025-12-18 06:31:38,Ordre,Ordre manual: stop laser
+2025-12-18 06:32:03,Alarma,Codi 1: Humitat
+2025-12-18 06:32:06,Alarma,Codi 0: Temperatura
+2025-12-18 06:32:52,Alarma,Codi 1: Humitat
+2025-12-18 06:32:55,Alarma,Codi 0: Temperatura
+2025-12-18 06:40:40,Alarma,Codi 3: Perduda Conexió
+2025-12-18 06:40:42,Alarma,Codi 3: Perduda Conexió
+2025-12-18 06:40:47,Alarma,Codi 3: Perduda Conexió
+2025-12-18 06:40:52,Alarma,Codi 3: Perduda Conexió
+2025-12-18 06:40:57,Alarma,Codi 3: Perduda Conexió
+2025-12-18 06:41:02,Alarma,Codi 3: Perduda Conexió
+2025-12-18 06:41:11,Alarma,Codi 3: Perduda Conexió
+2025-12-18 06:41:14,Alarma,Codi 3: Perduda Conexió
+2025-12-18 06:42:45,Comanda,Enviada ordre: seguir -> laser
+2025-12-18 06:42:45,Ordre,Ordre manual: seguir laser
+2025-12-18 06:42:53,Comanda,Enviada ordre: seguir -> laser
+2025-12-18 06:42:53,Ordre,Ordre manual: seguir laser
+2025-12-18 06:43:10,Comanda,Enviada ordre: stop -> laser
+2025-12-18 06:43:10,Ordre,Ordre manual: stop laser
+2025-12-18 06:43:36,Comanda,Enviada ordre: stop -> laser
+2025-12-18 06:43:36,Ordre,Ordre manual: stop laser
+2025-12-18 06:43:47,Comanda,Enviada ordre: stop -> laser
+2025-12-18 06:43:47,Ordre,Ordre manual: stop laser
+2025-12-18 06:43:55,Comanda,Enviada ordre: seguir -> laser
+2025-12-18 06:43:55,Ordre,Ordre manual: seguir laser
+2025-12-18 06:48:05,Alarma,Codi 8: Comunicacions Laser Compromeses
+2025-12-18 06:48:11,Alarma,Codi 8: Comunicacions Laser Compromeses
+2025-12-18 06:48:29,Comanda,Enviada ordre: stop -> laser
+2025-12-18 06:48:29,Ordre,Ordre manual: stop laser
+2025-12-18 06:53:29,Alarma,Codi 1: Humitat
+2025-12-18 06:53:37,Alarma,Codi 0: Temperatura
+2025-12-18 06:54:32,Alarma,Codi 7: Error de sintaxi (comanda manual)
+2025-12-18 06:54:41,Radar,Moviment: 2000
+2025-12-18 06:54:41,Alarma,Codi 1: Humitat
+2025-12-18 06:54:52,Alarma,Codi 0: Temperatura
+2025-12-18 06:55:01,Alarma,Codi 3: Perduda Conexió
+2025-12-18 06:55:10,Alarma,Codi 1: Humitat
+2025-12-18 06:55:18,Alarma,Codi 0: Temperatura
+2025-12-18 06:55:27,Alarma,Codi 3: Perduda Conexió
+2025-12-18 06:58:16,Alarma,Codi 1: Humitat
+2025-12-18 06:58:20,Alarma,Codi 0: Temperatura
+2025-12-18 06:58:29,Alarma,Codi 1: Humitat
+2025-12-18 06:58:34,Alarma,Codi 0: Temperatura
+2025-12-18 06:58:37,Alarma,Codi 1: Humitat
+2025-12-18 06:58:40,Alarma,Codi 0: Temperatura
+2025-12-18 06:58:43,Alarma,Codi 1: Humitat
+2025-12-18 06:58:47,Alarma,Codi 0: Temperatura
+2025-12-18 06:58:52,Alarma,Codi 1: Humitat
+2025-12-18 06:58:56,Alarma,Codi 0: Temperatura
+2025-12-18 06:58:59,Alarma,Codi 1: Humitat
+2025-12-18 06:59:03,Alarma,Codi 0: Temperatura
+2025-12-18 06:59:06,Alarma,Codi 1: Humitat
+2025-12-18 06:59:10,Alarma,Codi 0: Temperatura
+2025-12-18 06:59:13,Alarma,Codi 1: Humitat
+2025-12-18 06:59:17,Alarma,Codi 0: Temperatura
+2025-12-18 06:59:20,Alarma,Codi 1: Humitat
+2025-12-18 06:59:26,Alarma,Codi 0: Temperatura
+2025-12-18 06:59:31,Alarma,Codi 1: Humitat
+2025-12-18 06:59:36,Alarma,Codi 0: Temperatura
+2025-12-18 06:59:38,Alarma,Codi 1: Humitat
+2025-12-18 06:59:40,Alarma,Codi 0: Temperatura
+2025-12-18 06:59:45,Alarma,Codi 1: Humitat
+2025-12-18 06:59:47,Alarma,Codi 0: Temperatura
+2025-12-18 06:59:49,Alarma,Codi 1: Humitat
+2025-12-18 06:59:52,Alarma,Codi 0: Temperatura
+2025-12-18 06:59:55,Alarma,Codi 1: Humitat
+2025-12-18 07:01:45,Radar,Moviment: 1000
+2025-12-18 07:02:22,Radar,Canvi de velocitat: 0
+2025-12-18 07:03:10,Radar,Canvi de velocitat: 0
+2025-12-18 07:03:30,Comanda,Enviada ordre: stop -> radar
+2025-12-18 07:03:30,Ordre,Ordre manual: stop radar
+2025-12-18 07:03:38,Alarma,Codi 2: Distancia
+2025-12-18 07:05:29,Comanda,Enviada ordre: seguir -> laser
+2025-12-18 07:05:29,Ordre,Ordre manual: seguir laser
+2025-12-18 07:05:43,Comanda,Enviada ordre: seguir -> laser
+2025-12-18 07:05:43,Ordre,Ordre manual: seguir laser
+2025-12-18 07:06:09,Comanda,Enviada ordre: seguir -> laser
+2025-12-18 07:06:09,Ordre,Ordre manual: seguir laser
+2025-12-18 07:06:13,Alarma,Codi 8: Comunicacions Laser Compromeses
+2025-12-18 07:06:16,Alarma,Codi 8: Comunicacions Laser Compromeses
+2025-12-18 07:06:19,Alarma,Codi 8: Comunicacions Laser Compromeses
+2025-12-18 07:06:22,Alarma,Codi 8: Comunicacions Laser Compromeses
+2025-12-18 07:06:24,Alarma,Codi 8: Comunicacions Laser Compromeses
+2025-12-18 07:06:27,Alarma,Codi 8: Comunicacions Laser Compromeses
+2025-12-18 07:06:30,Alarma,Codi 8: Comunicacions Laser Compromeses
+2025-12-18 07:09:13,Comanda,Enviada ordre: seguir -> laser
+2025-12-18 07:09:13,Ordre,Ordre manual: seguir laser
+2025-12-18 07:09:45,Alarma,Codi 8: Comunicacions Laser Compromeses
+2025-12-18 07:09:50,Alarma,Codi 8: Comunicacions Laser Compromeses
+2025-12-18 07:09:55,Alarma,Codi 8: Comunicacions Laser Compromeses
+2025-12-18 07:09:59,Alarma,Codi 8: Comunicacions Laser Compromeses
+2025-12-18 07:10:05,Alarma,Codi 8: Comunicacions Laser Compromeses

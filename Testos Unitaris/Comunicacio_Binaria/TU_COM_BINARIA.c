@@ -33,6 +33,11 @@ Mitjanes (100)
 -       All : 100
 -       Escombreig: 101
 */
+int len(int llista[]){
+  int length = sizeof(llista) / sizeof(llista[0]);
+  return length;
+}
+
 int Enter_a_Binari(int EnterEntrada){//els numeros (el return) estan escrits de dreta a esquerra
     int StrBinari[16] = {0*16};
     int i = 15 ;
@@ -48,7 +53,7 @@ int Enter_a_Binari(int EnterEntrada){//els numeros (el return) estan escrits de 
 }
 
 int Float_a_Binari(float FraccioEntrada){
-    int StrBinari[16] = {0*16};
+    int StrBinari[16] = {0};
     int i = 0;
     //int NumDecimals = 3;
     //int FraccicoEntradaint = (int)FraccioEntrada*pow(10,NumDecimals); //10^num decimals 

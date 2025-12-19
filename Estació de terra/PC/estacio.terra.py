@@ -7,7 +7,16 @@ import time
 import threading
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import random
-
+import sys
+import re
+import matplotlib
+import csv
+import os
+from datetime import datetime
+from tkinter import ttk
+import tkinter as tk
+from matplotlib.animation import FuncAnimation
+from matplotlib.figure import Figure
 
 Debug_RecepcioSimulada = False #En cas de ser True s'inventarà les dades de recepció ignorant completament el port sèrie. 
                               #És d'utilitat per fer proves amb el codi si no es disposa del maquinari físic (els dos arduinos)
@@ -16,7 +25,7 @@ Debug_RecepcioSimulada = False #En cas de ser True s'inventarà les dades de rec
 # CONFIGURACIÓ DEL PORT SÈRIE 
 # ───────────────────────────────────────────────
 if Debug_RecepcioSimulada == False:
-    device = 'COM5'
+    device = 'COM11'
     mySerial = serial.Serial(device, 9600)
     print("funcionant:")
 
@@ -31,16 +40,29 @@ histAng = []
 histDist = []
 histmitjT = []
 histmitjH = []
+histTemps = []
+histCoordx = []
+histCoordy = []
+histCoordz = []
 
+mode_orbita = "2D"   # o "3D"
+
+alarm_active = False
+message_open = False  # ← control del messagebox obert
+# Diccionari global per controlar missatges oberts
+alarms_shown = {}  # clau = codi alarma, valor = True si ja s'ha mostrat
 
 contact = []
 parametres = 4
 Llista_Arguments_Ordres = ["stop", "seguir", "freq"]
-llista_Arguments_Radar = ["vel", "lock", "moure", "escombreig"]
-llista_Id_sys = ["temp", "hum", "radar", "alarmes", "escombreig", "all"]
-noms_alarmes = ["Temperatura", "Humitat", "Distancia", "Perduda Conexió"]
+llista_Arguments_Radar = ["velocitat", "lock", "moure", "escombreig"]
+llista_Id_sys = ["temp", "hum", "radar", "alarmes", "all", "laser"]
+noms_alarmes = ["Temperatura", "Humitat", "Distancia", "Perduda Conexió", "Error de sintaxi","Temperatura màxima superada","Humitat màxima superada","Error de sintaxi (comanda manual)", "Comunicacions Laser Compromeses"]
 
 
+R_EARTH = 6371000  # radi de la Terra en metres
+R_EARTH = 6.371e6      # Radi de la Terra (m)
+R_ORBIT = 6.8e6       # Radi de l'òrbita (exemple)
 
 #variables per l'alarma de la mitjana de temperatura i humitat
 
@@ -48,10 +70,24 @@ consec_Tmax = 0
 consec_Hmax = 0
 Tmax_val = None
 Hmax_val = None
+mySerialOrbit = None
 
 stopCalc = False
 
+update_mitjanaH = False
+update_mitjanaT = False
 
+
+#currentplot = 0  # 0 = 2D, 1 = 3D       variable per variar les gràfiques de les òrbites
+
+
+# -------- Esdeveniments (log) -----------
+EVENTS_FILE = "events_log.csv"   # ruta del fitxer on es guarden els events
+EVENT_TYPES = ["Comanda", "Alarma", "Observació","Radar","Ordre","Mitjanes"]  # els cinc tipus que demanes
+
+events = []   # llista de dicts: {"datetime": datetime obj, "tipo": str, "desc": str}
+events_lock = threading.Lock()  # per sincronitzar accés a events
+# ----------------------------------------
 
 
 data_lock = threading.Lock() #https://labex.io/es/tutorials/python-how-to-use-lock-in-python-s-threading-module-417460
@@ -59,36 +95,253 @@ data_lock = threading.Lock() #https://labex.io/es/tutorials/python-how-to-use-lo
 
 
 # ───────────────────────────────────────────────
-# FUNCIONS AUXILIARS HUMITAT I TEMPERATURA
+# FUNCIONS TEMPS I ALARMES
 # ───────────────────────────────────────────────
 print ("Funcionant")
 def temps():
     return time.time() - t0
 
-def Notificació_Alarma(arguments):
-    if arguments < len(noms_alarmes):
-        print("alarma")
-    #    messagebox.showwarning("Alarma", noms_alarmes[arguments]) 
+'''
+CODI D'ALARMES:
+Alarma 0: Temperatura
+Alarma 1: Humitat
+Alarma 2: Distància
+Alarma 3: Pèrdua de conecció
+Alarma 4: Error de sintaxi
+Alarma 5: Temperatura màxima superada
+Alarma 6: Humitat màxima sueprada
+Alarma 7: Error de sintaxi per manual d'ordres
+'''
 
+def Notificació_Alarma(codi):
+    if codi >= len(noms_alarmes):
+        return
+
+    alarma_text = noms_alarmes[codi]
+    add_event("Alarma", f"Codi {codi}: {alarma_text}")
+
+    # Si ja s'ha mostrat, no fem res
+    if alarms_shown.get(codi, False):
+        return
+    
+    elif codi == 7:
+        def show_msg7():
+            print("dins la funicó d'alarma 7")
+            win = tk.Toplevel()
+            win.title("Alarma")
+            win.geometry("360x200")
+            win.resizable(False, False)
+            win.attributes("-topmost", True)
+            win.configure(bg="#f5f5f5")
+            win.protocol("WM_DELETE_WINDOW", lambda: close_alarm(win, codi))
+
+            # Centrar
+            win.update_idletasks()
+            x = (win.winfo_screenwidth() - win.winfo_width()) // 2
+            y = (win.winfo_screenheight() - win.winfo_height()) // 3
+            win.geometry(f"+{x}+{y}")
+
+            # ─── Capçalera ─────────────────────────────
+            header = tk.Frame(win, bg="#b71c1c")
+            header.pack(fill="x")
+
+            tk.Label(header, text="⚠ ALARMA", bg="#b71c1c", fg="white", font=("Helvetica", 14, "bold")).pack(padx=10, pady=8)
+
+            # ─── Cos ───────────────────────────────────
+            body = tk.Frame(win, bg="#f5f5f5")
+            body.pack(fill="both", expand=True)
+
+            tk.Label(body, text=alarma_text, wraplength=320, justify="left", bg="#f5f5f5", fg="#b71c1c", font=("Helvetica", 11, "bold")).pack(padx=15, pady=15)
+
+            # ─── Botons ────────────────────────────────
+            frame_botons = tk.Frame(body, bg="#f5f5f5")
+            frame_botons.pack(pady=(0, 15))
+
+            #botó ajuda
+            tk.Button(frame_botons, text="Ajuda", font=("Helvetica", 11), relief="flat", bg="#e0e0e0", activebackground="#d5d5d5", cursor="hand2", command=mostrar_ajuda).pack(side="left", padx=6)
+            #botó ok
+            tk.Button(frame_botons, text="OK", font=("Helvetica", 11, "bold"), relief="flat", bg="#b71c1c", fg="white", activebackground="#8e0000", cursor="hand2", width=8, command=lambda: close_alarm(win, codi)).pack(side="left", padx=6)
+
+
+        def mostrar_ajuda():
+            ajuda = tk.Toplevel()
+            ajuda.title("Com evitar l'error")
+            ajuda.geometry("520x420")
+            ajuda.resizable(True, True)
+            ajuda.configure(bg="#fafafa")
+
+            # Centrar
+            ajuda.update_idletasks()
+            x = (ajuda.winfo_screenwidth() - ajuda.winfo_width()) // 2
+            y = (ajuda.winfo_screenheight() - ajuda.winfo_height()) // 3
+            ajuda.geometry(f"+{x}+{y}")
+
+            # Títol
+            tk.Label(ajuda, text="Guia d'ús i esquema de comandes", font=("Helvetica", 13, "bold"), bg="#fafafa").pack(pady=(10, 5))
+
+            frame = tk.Frame(ajuda, bg="#fafafa")
+            frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+            scrollbar = tk.Scrollbar(frame)
+            scrollbar.pack(side="right", fill="y")
+
+            txt = tk.Text(frame, wrap="word", font=("Helvetica", 10), bg="#ffffff", relief="flat", padx=10, pady=10, yscrollcommand=scrollbar.set)
+            txt.pack(side="left", fill="both", expand=True)
+
+            scrollbar.config(command=txt.yview)
+
+            txt.insert(
+                "1.0",
+                "---EXPLICACIÓ DE L'ESQUEMA---\n\n"
+                "Posicions al frame de comanda manual:\n"
+                "  - Primera posició\n"
+                "    - Segona posició\n"
+                "      - Tercera posició\n"
+                "        - Quarta posició\n\n"
+                "SISTEMES:\n"
+                "  · hum (Humitat)\n"
+                "  · temp (Temperatura)\n"
+                "  · radar\n"
+                "  · alarmes\n"
+                "  · all (tots els sistemes)\n\n"
+                "---SINTAXI ADEQUADA---\n\n"
+                "ORDRES:\n"
+                "  - Stop\n"
+                "    - Sistema\n"
+                "  - Seguir\n"
+                "    - Sistema\n"
+                "  - Freqüència\n"
+                "    - Sistema\n"
+                "      - Valor en milisegons\n\n"
+                "RADAR:\n"
+                "  - Escombreig\n"
+                "  - Lock\n"
+                "    - Posició inicial (0–4779)\n"
+                "      - Angle d'escombreig (0–4779)\n"
+                "  - Moure\n"
+                "    - Posició constant (0–4779)\n"
+                "  - Velocitat\n"
+                "    - Valor (0–500)\n\n"
+                "MITJANES:\n"
+                "  - Satèl·lit\n"
+                "  - Estació de terra\n"
+            )
+
+            txt.config(state="disabled")
+
+
+        window.after(0, show_msg7)
+        alarms_shown[codi] = True  # marquem que s'ha mostrat
+
+    else:
+        def show_msg():
+            win = tk.Toplevel()
+            win.title("Alarma")
+            win.geometry("360x200")
+            win.resizable(False, False)
+            win.attributes("-topmost", True)
+            win.configure(bg="#f5f5f5")
+            win.protocol("WM_DELETE_WINDOW", lambda: close_alarm(win, codi))
+
+            # Centrem la finestra
+            win.update_idletasks()
+            x = (win.winfo_screenwidth() - win.winfo_width()) // 2
+            y = (win.winfo_screenheight() - win.winfo_height()) // 3
+            win.geometry(f"+{x}+{y}")
+
+            # ─── Capçalera ─────────────────────────────
+            header = tk.Frame(win, bg="#b71c1c")
+            header.pack(fill="x")
+            tk.Label(header, text="⚠ ALARMA", bg="#b71c1c", fg="white", font=("Helvetica", 14, "bold")).pack(padx=10, pady=8)
+
+            # ─── Cos ───────────────────────────────────
+            body = tk.Frame(win, bg="#f5f5f5")
+            body.pack(fill="both", expand=True)
+            tk.Label(body, text=alarma_text, wraplength=320, justify="left", bg="#f5f5f5", fg="#b71c1c", font=("Helvetica", 11, "bold")).pack(padx=15, pady=15)
+            # ─── Botons ────────────────────────────────
+            frame_botons = tk.Frame(body, bg="#f5f5f5")
+            frame_botons.pack(pady=(0, 15))
+
+            #botó ok
+            tk.Button(frame_botons, text="OK", font=("Helvetica", 11, "bold"), relief="flat", bg="#b71c1c", fg="white", activebackground="#8e0000", cursor="hand2", width=8, command=lambda: close_alarm(win, codi)).pack(side="left", padx=6)
+
+
+        window.after(0, show_msg)
+        alarms_shown[codi] = True  # marquem que s'ha mostrat
+
+def close_alarm(win, codi):
+    """Tanca la finestra i permet que l'alarma es pugui tornar a mostrar"""
+    alarms_shown[codi] = False
+    win.destroy()
+
+def validar_numero(entry_widget):
+    try:
+        return float(entry_widget.get())
+    except ValueError:
+        # Activa alarma “Error de sintaxi” (codi 4)
+        Notificació_Alarma(4)
+        add_event("Alarma", "Error de sintaxi: valor no numèric")
+        return None
+    
+def check_alarm():
+    global alarm_active, message_open
+
+    # Aquí poses la teva condició real
+    alarm_condition = True  # Exemple
+
+    if alarm_condition and not message_open:
+        message_open = True
+        # Mostrem el messagebox en un petit thread o directament, bloquejant
+        #messagebox.showwarning("Alarma!", "S'ha activat l'alarma!")
+        message_open = False  # quan es tanca el messagebox es torna a posar a False
+
+    # Tornem a cridar la funció després d'un temps
+    window.after(500, check_alarm)  # 500 ms, ajustable
+
+# ───────────────────────────────────────────────
+# BOTÓ PER CANVIAR ENTRE GRÀFIQUES
+# ───────────────────────────────────────────────
+def canviar_grafica_orbita():
+    global mode_orbita
+
+    if mode_orbita == "2D":
+        # Amagar 2D
+        canvas_orbita.get_tk_widget().grid_remove()
+
+        # Mostrar 3D
+        orbit3d.canvas.get_tk_widget().grid(row=0, column=0, padx=5, pady=5, sticky=N+S+E+W, rowspan = 1)
+
+        mode_orbita = "3D"
+
+    else:
+        # Amagar 3D
+        orbit3d.canvas.get_tk_widget().grid_remove()
+
+        # Mostrar 2D
+        canvas_orbita.get_tk_widget().grid(row=0, column=0, padx=5, pady=5, sticky=N+S+E+W, rowspan = 1)
+
+        mode_orbita = "2D"
 
 # ───────────────────────────────────────────────
 # FUNCIONS PER ENVIAR DADES
 # ───────────────────────────────────────────────
 
-def stopHT(): #Aquesta funció ha migrat a Send_Ordres
+def stopHT(): 
     Send_Ordres("stop","temp")
-    #Send_Ordres("stop", "hum")
+    Send_Ordres("stop", "hum")
     print("STOP")
     #mySerial.close
 
-def resumeHT(): #Aquesta funció ha migrat a Send_Ordres
+def resumeHT():
     Send_Ordres("seguir","temp")
     Send_Ordres("seguir", "hum")
     print("REANUDAR")
 
-def canvi_periodeHT(): ##Aquesta funció ha migrat a Send_Canvi_Frequencia
+def canvi_periodeHT():
     Send_Canvi_Frequencia("temp", fraseHTEntry.get())
     Send_Canvi_Frequencia("hum", fraseHTEntry.get())
+    add_event("Comanda", f"Canvi període HT a {fraseHTEntry.get()}")     #registre d'events
+    validar_numero(fraseHTEntry)       #alarma sino s'ha entroduint un valor correcte
 
 def Tmax():
     global Tmax_val
@@ -97,6 +350,18 @@ def Tmax():
         print('La temperatura màxima és:' + fraseHTEntry_Tmax.get())
     except ValueError:
         print("Error: no has introduït un número.")
+        Notificació_Alarma(4)
+    add_event("Comanda", f"Tmax configurat a {fraseHTEntry_Tmax.get()}")     #registre d'events
+    validar_numero(fraseHTEntry_Tmax)       #alarma sino s'ha entroduint un valor correcte
+
+    start_mitjanaT_label(
+    histT,
+    data_lock,
+    parent_widget=button_HT_frame,
+    interval=0.5,
+    row=4,
+    column=0
+    )
 
 def Hmax():
     global Hmax_val
@@ -105,12 +370,23 @@ def Hmax():
         print('La humitat màxima és:' + fraseHTEntry_Hmax.get())
     except ValueError:
         print("Error: no has introduït un número.")
+        Notificació_Alarma(4)
+    add_event("Comanda", f"Hmax configurat a {fraseHTEntry_Hmax.get()}")     #registre d'events
+    validar_numero(fraseHTEntry_Hmax)       #alarma sino s'ha entroduint un valor correcte
+    start_mitjanaH_label(histH, data_lock, parent_widget=button_HT_frame, interval=0.5, row=5, column=0)
 
 def activar_mitjanes_EstTerra():
+    
+    update_mitjanaH = False
+    label_mitjanaH_arduino.config(text="Mitjana H Satèl·lit: --")  # buida el label
+    update_mitjanaT = False
+    label_mitjanaT_arduino.config(text="Mitjana T Satèl·lit: --")  # buida el label
+
+
     global stopCalc
     stopCalc = False
     mitjanes_EstTerra()
-
+    add_event("Comanda", "Mitjanes Estació de terra")     #registre d'events
 
 def mitjanes_EstTerra(): #NOMÉS ES CALCULEN LES MITJANES QUAN ES CTRIDA LA FUNCIÓ A TRAVÉS DE LA FUNCIÓ ANTERIOR, SÓN LES MITJANES CALCULADES PER L'ESTACIÓ DE TERRA 
     global thread_mitjanaT, thread_mitjanaH
@@ -138,9 +414,7 @@ def mitjanes_EstTerra(): #NOMÉS ES CALCULEN LES MITJANES QUAN ES CTRIDA LA FUNC
     
     else:    
         return
-
-    
-    
+  
 #Realment, les funcions seguents es podrien ajuntar en una de sola, de moment s'ha optat per deixar-ho aixi perque pot resultar més entenedor. En un futur es poden ajuntar.
 
 def Send_Ordres(Argument, info):
@@ -157,6 +431,11 @@ def Send_Ordres(Argument, info):
             else:
                 i = i+1
 
+        if trobat == 0:
+            Notificació_Alarma(7)
+            print("no troba radar a llistaarguments")
+            return
+        
         if Codi_Argument == 0 or Codi_Argument == 1: # Si el argument == a Stop o Seguir
             trobat = 0
             i = 0
@@ -166,14 +445,21 @@ def Send_Ordres(Argument, info):
                     Info_Missatge = i
                 else:
                     i=i+1
-        
-        missatgefinal = ("2;"+str(Codi_Argument)+";"+str(Info_Missatge)+";")
+        try:
+            missatgefinal = ("2;"+str(Codi_Argument)+";"+str(Info_Missatge)+";")
 
-        print(missatgefinal)
+            print(missatgefinal)
 
-        missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal))+"|")
-        mySerial.write(missatgefinal.encode('utf-8'))
-        mySerial.write("\n".encode('utf-8'))
+            missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal)))
+            mySerial.write(missatgefinal.encode('utf-8'))
+            mySerial.write("\n".encode('utf-8'))
+                # Després d'enviar pel serial (o en mode debug), afegim l'event:
+        except TypeError :
+            Notificació_Alarma(4)
+    try:
+        add_event("Comanda", f"Enviada ordre: {Argument} -> {info}")
+    except Exception:
+        pass
 
 def Send_Canvi_Frequencia(Id_Sys, ValorFreq):
     #Estrucutra del missatge 
@@ -189,11 +475,12 @@ def Send_Canvi_Frequencia(Id_Sys, ValorFreq):
                 Missatge_Id_Sys = i
             else:
                 i=i+1
-        
-        missatgefinal = ("2;2;"+str(Missatge_Id_Sys)+";"+str(abs(ValorFreq))+";")   
-        missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal))+"|")
-
-        mySerial.write(missatgefinal.encode('utf-8'))
+        if trobat:
+            missatgefinal = ("2;2;"+str(Missatge_Id_Sys)+";"+str(abs(ValorFreq))+";")   
+            missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal)))
+            mySerial.write(missatgefinal.encode('utf-8'))
+        else:
+            Notificació_Alarma(4)
 
 def Send_Radar(Argument, Valor1, Valor2):
     #                            Estrucutras del missatge 
@@ -207,33 +494,30 @@ def Send_Radar(Argument, Valor1, Valor2):
         i = 0
         while trobat == 0 and i < len(llista_Arguments_Radar):
             if llista_Arguments_Radar[i] == Argument:
-                Codi_Argument = Argument
+                Codi_Argument = i
+                trobat = 1
             else:
                 i = i+1
+        if trobat:
+            if Codi_Argument == 0 or Codi_Argument == 2: #Canvi velocitat o bé moure a x lloc
+                Valor1_Missatge = Valor1
+                missatgefinal = ("3;"+str(Codi_Argument)+";"+str(Valor1_Missatge)+";")
 
-        
-        if Codi_Argument == 0 or Codi_Argument == 2: #Canvi velocitat o bé moure a x lloc
-            Valor1_Missatge = Valor1
-            missatgefinal = ("3;"+str(Codi_Argument)+";"+str(Valor1_Missatge)+";")
+            if Codi_Argument == 1: # El cas de lock que nescesita dos valors 
+                Valor1_Missatge = Valor1
+                Valor2_Missatge = Valor2
 
-        if Codi_Argument == 1: # El cas de lock que nescesita dos valors 
-            Valor2_Missatge = Valor2
+                missatgefinal = ("3;"+str(Codi_Argument)+";"+str(Valor1_Missatge)+";"+str(Valor2_Missatge)+";")
 
-            missatgefinal = ("3;"+str(Codi_Argument)+";"+str(Valor1_Missatge)+";"+str(Valor2_Missatge)+";")
+            if Codi_Argument == 3: #En cas que sigui escombreig
+                missatgefinal = ("3;"+str(Codi_Argument)+";")
 
-        if Codi_Argument == 3: #En cas que sigui escombreig
-            missatgefinal = ("3;"+str(Codi_Argument)+";")
-
-        missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal))+"|")
-        
-        mySerial.write(missatgefinal.encode('utf-8'))
-        mySerial.write("\n".encode('utf-8'))
-        
-def activar_mitjanes_arduino():
-    global stopCalc
-    stopCalc = True  # Atura els fils
-    Send_Mitjanes_Arduino("temp", 10)
-    Send_Mitjanes_Arduino("hum", 10)
+            missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal)))
+            
+            mySerial.write(missatgefinal.encode('utf-8'))
+            mySerial.write("\n".encode('utf-8'))
+        else: 
+            Notificació_Alarma(7) #Error de sintaxi
 
 def Send_Mitjanes_Arduino(Argument, Valor1): #Aquesta funció serveix nomès pq les mitjanes les faci l'arduino. No serveix perque les mitjanes siguin fetes a la Ground Station
     #                            Estrucutra del missatge 
@@ -258,69 +542,150 @@ def Send_Mitjanes_Arduino(Argument, Valor1): #Aquesta funció serveix nomès pq 
             return -1 #Error, els elements Alarmes i Escombreig no accepten mitjana
         
         missatgefinal = ("4;"+"0;"+str(Codi_Argument)+";"+str(Valor_Missatge)+";")
-        missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal))+"|")
+        missatgefinal = (missatgefinal + str(Generar_Checksum(missatgefinal)))
         print("ENVIEM DADES_________________________________")
         mySerial.write(missatgefinal.encode('utf-8'))
         mySerial.write("\n".encode('utf-8'))
 
 def Generar_Checksum(missatge):
-    checksum = 0
+    checksum = 59 #Començem amb 59 pq és el codi ascii del ";", el qual s'elimina per la funció rsplit
     for i in range(len(missatge)):
         checksum = checksum + ord(missatge[i]) #La funció ord() retorna el valor ASCII de l'element
 
     return checksum
 
 def MitjanesArduinoTkinterFriendly():
+    update_mitjanaH = True
+    update_mitjanaT = True
     print("mitjana arduino")
     Send_Mitjanes_Arduino("temp",0)
     Send_Mitjanes_Arduino("hum",0)
+    add_event("Comanda", "Mitjanes Satèl·lit")     #registre d'events
 
 
 # ───────────────────────────────────────────────
 # FUNCIONS AUXILIARS DISTANCIA
 # ───────────────────────────────────────────────
 
-def stop_dist(): #Aquesta funció ha migrat a Send_Ordres
-    if Debug_RecepcioSimulada == False:
-        mensaje = "STOP"
-        mySerial.write(mensaje.encode('utf-8'))
-    print("STOP")
-    #mySerial.close
+def radar_play():
+    Send_Ordres("seguir", "radar")
+    #add_event("Comanda", "Radar PLAY")
 
-def resume_dist(): #Aquesta funció ha migrat a Send_Ordres
-    if Debug_RecepcioSimulada == False:
-        mensaje = "REANUDAR"
-        mySerial.write(mensaje.encode('utf-8'))
-    print("REANUDAR")
+def radar_stop():
+    Send_Ordres("stop", "radar")
+    #add_event("Comanda", "Radar STOP")
 
-def error_dist(): #Aquesta funció ha migrat a Notificacio_Alarma
-    print("FALLO EN LA TRANSMISSIÓ DE DADES")
+def canvi_periodedist():
+    Send_Canvi_Frequencia("dist", frase_distEntry.get())
+    add_event("Comanda", f"Canvi període distància a {frase_distEntry.get()}")     #registre d'events
+    validar_numero(frase_distEntry)       #alarma sino s'ha entroduint un valor correcte
 
-def canvi_periode_dist(): ##Aquesta funció ha migrat a Send_Canvi_Frequencia
-    periode_transmisio = "periode" +frase_distEntry.get()
-    mySerial.write(periode_transmisio)
-    print ('Has canviat el periode de transimsio a --- ' + frase_distEntry.get())
+# ───────────────────────────────────────────────
+# FUNCIONS REGISTRE D'EVENTS
+# ───────────────────────────────────────────────
+def _format_dt(dt):
+    # Format llegible per a l'usuari i per a guardar
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
 
-    
+def _parse_dt(s):
+    try:
+        return datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return None
+
+def load_events_from_file():
+    #Carrega events des del CSV a la llista events.
+    global events
+    if not os.path.exists(EVENTS_FILE):
+        return
+    with events_lock:
+        with open(EVENTS_FILE, newline='', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            events = []
+            for row in reader:
+                dt = _parse_dt(row.get("datetime", ""))
+                tipo = row.get("type", "")
+                desc = row.get("description", "")
+                if dt:
+                    events.append({"datetime": dt, "type": tipo, "description": desc})
+
+def save_event_to_file(event):
+    """Afegeix un event (dict) al fitxer CSV (append)."""
+    header_needed = not os.path.exists(EVENTS_FILE)
+    with open(EVENTS_FILE, "a", newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        if header_needed:
+            writer.writerow(["datetime", "type", "description"])
+        writer.writerow([_format_dt(event["datetime"]), event["type"], event["description"]])
+
+def save_all_events_to_file():
+    """Escriu tots els events a l'arxiu (sobreescriu)."""
+    with events_lock:
+        with open(EVENTS_FILE, "w", newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(["datetime", "type", "description"])
+            for e in events:
+                writer.writerow([_format_dt(e["datetime"]), e["type"], e["description"]])
+
+def add_event(tipo, description, dt=None, persist=True):
+
+    if tipo not in EVENT_TYPES:
+        tipo = "Observació"  # fallback
+    if dt is None:
+        dt = datetime.now()
+
+    ev = {"datetime": dt, "type": tipo, "description": description}
+
+    with events_lock:
+        events.append(ev)
+
+    if persist:
+        try:
+            save_event_to_file(ev)
+        except Exception as e:
+            print("Error desant event:", e)
+
+    # Actualitza la vista si existeix
+    try:
+        if 'events_treeview' in globals():
+            refresh_events_treeview()
+    except Exception:
+        pass
+
+    #Scroll automàtic al afegir un event
+    try:
+        if 'events_treeview' in globals():
+            refresh_events_treeview()
+
+            # --- Desplaçar scroll a l'última fila ---
+            children = events_treeview.get_children()
+            if children:
+                events_treeview.see(children[-1])
+    except Exception:
+        pass
+
 # ───────────────────────────────────────────────
 # FINESTRA PRINCIPAL TKINTER
 # ───────────────────────────────────────────────
-window = Tk()
-window.geometry("10000x800")
+window = tk.Tk()
+window.geometry("1100x710")
 window.title("Control de transmissió de dades")
 
-window.columnconfigure(0, weight=1)
-window.columnconfigure(1, weight=1)
-window.columnconfigure(2, weight=1)
-window.rowconfigure(0, weight=1)
-window.rowconfigure(1, weight=1)
-window.rowconfigure(2, weight=1)
+
+window.columnconfigure(0, weight=1, uniform="col")
+window.columnconfigure(1, weight=1, uniform="col")
+window.columnconfigure(2, weight=1, uniform="col")
+window.rowconfigure(0, weight=3, uniform="row")
+window.rowconfigure(1, weight=1, uniform="row")
+window.rowconfigure(2, weight=1, uniform="row")
+window.rowconfigure(3, weight=1, uniform="row")
+window.rowconfigure(4, weight=1)
 
 
 #tituloLabel = Label(window, text="Transmissió de dades", font=("Courier", 20, "italic"))
 #tituloLabel.grid(row=0, column=0, columnspan=5, padx=5, pady=5, sticky=N + S + E + W)
 
-# FRAME CONTROLADOR TEMPERATURA I HUMITAT:
+#─────────────────FRAME CONTROLADOR TEMPERATURA I HUMITAT:─────────────────
 button_HT_frame = LabelFrame(window, text = 'Humitat i Temperatura', font=("Arial", 15))
 button_HT_frame.grid(row=0, column=0, padx=5, pady=5, sticky=N + S + E + W)
 
@@ -335,20 +700,30 @@ button_HT_frame.rowconfigure(6, weight=1)
 button_HT_frame.columnconfigure(0, weight=1)
 button_HT_frame.columnconfigure(1, weight=1)
 
-IniciarHTButton = Button(button_HT_frame, text="Play", bg='#6BD66B', fg="white", font=("Arial", 20), command=resumeHT)
+IniciarHTButton = Button(button_HT_frame, text="Play", bg='#6BD66B', fg="white", font=("Arial", 15), command=resumeHT)
 IniciarHTButton.grid(row=0, column=0, padx=5, pady=5, sticky=N + S + E + W)
 
-PararHTButton = Button(button_HT_frame, text="Pausa", bg='#FFB74D', fg="white", font=("Arial", 20), command=stopHT)
+PararHTButton = Button(button_HT_frame, text="Pausa", bg='#FFB74D', fg="white", font=("Arial", 15), command=stopHT)
 PararHTButton.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
 
-CalculArduinoButton = Button(button_HT_frame, text="Calcula la mitjana al satèl·lit", bg="#FF4D6B", fg="white", font=("Arial", 20), command=MitjanesArduinoTkinterFriendly)
-CalculArduinoButton.grid(row=6, column=0, padx=5, pady=5, sticky=N + S + E + W)
+CalculArduinoButton = Button(button_HT_frame, text="Calcula la mitjana al satèl·lit", bg="#FF4D6B", fg="white", font=("Arial", 15), command=MitjanesArduinoTkinterFriendly)
+CalculArduinoButton.grid(row=6, column=0, padx=10, pady=5, sticky=N + S + E + W)
 
-CalculEstTerraButton = Button(button_HT_frame, text="Calcula la mitjana a l'estació de terra", bg='#FF4D6B', fg="white", font=("Arial", 20), command=activar_mitjanes_EstTerra)
-CalculEstTerraButton.grid(row=6, column=1, padx=5, pady=5, sticky=N + S + E + W)
+CalculEstTerraButton = Button(button_HT_frame, text="Calcula la mitjana a l'estació de terra", bg='#FF4D6B', fg="white", font=("Arial", 15), command=activar_mitjanes_EstTerra)
+CalculEstTerraButton.grid(row=6, column=1, padx=10, pady=5, sticky=N + S + E + W)
 
+label_mitjanaT_arduino = Label(button_HT_frame, text="Mitjana T Satèl·lit: --", font=("Arial", 14))
+label_mitjanaT_arduino.grid(row=4, column=1, padx=5, pady=5, sticky=W)
 
-        ##FRAME CONTROLADOR DE PERIODE TEMPERATURA I HUMITAT
+label_mitjanaH_arduino = Label(button_HT_frame, text="Mitjana H Satèl·lit: --", font=("Arial", 14))
+label_mitjanaH_arduino.grid(row=5, column=1, padx=5, pady=5, sticky=W)
+
+label_mitjanaT_ET = Label(button_HT_frame, text="Mitjana T ET: --", font=("Arial", 14))
+label_mitjanaT_ET.grid(row=4, column=0, padx=5, pady=5, sticky=W)
+
+label_mitjanaH_ET = Label(button_HT_frame, text="Mitjana H ET: --", font=("Arial", 14))
+label_mitjanaH_ET.grid(row=5, column=0, padx=5, pady=5, sticky=W)
+
 periode_HT_frame = LabelFrame(button_HT_frame, text = 'Modificar el periode de transmissió', font=("Arial", 10))
 periode_HT_frame.grid(row=1, column=0, columnspan = 2, padx=5, pady=5, sticky=N + S + E + W)
 
@@ -356,13 +731,13 @@ periode_HT_frame.rowconfigure(0, weight=1)
 periode_HT_frame.columnconfigure(0, weight=1)
 periode_HT_frame.columnconfigure(1, weight=1)
 
-AplicarHTButton = Button(periode_HT_frame, text="Aplicar", bg='#4DA3FF', fg="white", font=("Arial", 20), command=canvi_periodeHT)
+AplicarHTButton = Button(periode_HT_frame, text="Aplicar", bg='#4DA3FF', fg="white", font=("Arial", 15), command=canvi_periodeHT)
 AplicarHTButton.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
 
-fraseHTEntry = Entry(periode_HT_frame, font=("Arial", 20))
+fraseHTEntry = Entry(periode_HT_frame, font=("Arial", 15))
 fraseHTEntry.grid(row=0, column=0, columnspan = 1, padx=5, pady=5, sticky=N + S + E + W)
 
-        ##FRAME TEMPERATURA MÀXIMA
+#----------------FRAME TEMPERATURA MÀXIMA----------------
 Tmax_HT_frame = LabelFrame(button_HT_frame, text = 'Temperatura màxima', font=("Arial", 10))
 Tmax_HT_frame.grid(row=2, column=0, columnspan = 2, padx=5, pady=5, sticky=N + S + E + W)
 
@@ -370,13 +745,13 @@ Tmax_HT_frame.rowconfigure(0, weight=1)
 Tmax_HT_frame.columnconfigure(0, weight=1)
 Tmax_HT_frame.columnconfigure(1, weight=1)
 
-AplicarHTButton_Tmax = Button(Tmax_HT_frame, text="Aplicar", bg='#4DA3FF', fg="white", font=("Arial", 20), command=Tmax)
+AplicarHTButton_Tmax = Button(Tmax_HT_frame, text="Aplicar", bg='#4DA3FF', fg="white", font=("Arial", 15), command=Tmax)
 AplicarHTButton_Tmax.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
 
-fraseHTEntry_Tmax = Entry(Tmax_HT_frame, font=("Arial", 20))
+fraseHTEntry_Tmax = Entry(Tmax_HT_frame, font=("Arial", 15))
 fraseHTEntry_Tmax.grid(row=0, column=0, columnspan = 1, padx=5, pady=5, sticky=N + S + E + W)
 
-        ##FRAME HUMITAT MÀXIMA
+#----------------FRAME HUMITAT MÀXIMA----------------
 Hmax_HT_frame = LabelFrame(button_HT_frame, text = 'Humitat màxima', font=("Arial", 10))
 Hmax_HT_frame.grid(row=3, column=0, columnspan = 2, padx=5, pady=5, sticky=N + S + E + W)
 
@@ -384,15 +759,14 @@ Hmax_HT_frame.rowconfigure(0, weight=1)
 Hmax_HT_frame.columnconfigure(0, weight=1)
 Hmax_HT_frame.columnconfigure(1, weight=1)
 
-AplicarHTButton_Hmax = Button(Hmax_HT_frame, text="Aplicar", bg='#4DA3FF', fg="white", font=("Arial", 20), command=Hmax)
+AplicarHTButton_Hmax = Button(Hmax_HT_frame, text="Aplicar", bg='#4DA3FF', fg="white", font=("Arial", 15), command=Hmax)
 AplicarHTButton_Hmax.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
 
-fraseHTEntry_Hmax = Entry(Hmax_HT_frame, font=("Arial", 20))
+fraseHTEntry_Hmax = Entry(Hmax_HT_frame, font=("Arial", 15))
 fraseHTEntry_Hmax.grid(row=0, column=0, columnspan = 1, padx=5, pady=5, sticky=N + S + E + W)
 
 
-# FRAME CONTROLADOR DADES DE DISTÀNCIA
-
+#─────────────────FRAME CONTROLADOR DADES DE DISTÀNCIA─────────────────
 button_dist_frame = LabelFrame(window, text = 'Sensor de distància', font=("Arial", 15))
 button_dist_frame.grid(row=1, column=0, padx=5, pady=5, sticky=N + S + E + W)
 
@@ -401,13 +775,13 @@ button_dist_frame.rowconfigure(1, weight=1)
 button_dist_frame.columnconfigure(0, weight=1)
 button_dist_frame.columnconfigure(1, weight=1)
 
-Iniciar_distButton = Button(button_dist_frame, text="Play", bg='#6BD66B', fg="white", font=("Arial", 20), command=Send_Ordres("seguir", "radar"))
+Iniciar_distButton = Button(button_dist_frame, text="Play", bg='#6BD66B', fg="white", font=("Arial", 15), command=radar_play)
 Iniciar_distButton.grid(row=0, column=0, padx=5, pady=5, sticky=N + S + E + W)
 
-Parar_distButton = Button(button_dist_frame, text="Pausa", bg='#FFB74D', fg="white", font=("Arial", 20), command=Send_Ordres("stop", "radar"))
+Parar_distButton = Button(button_dist_frame, text="Pausa", bg='#FFB74D', fg="white", font=("Arial", 15), command=radar_stop)
 Parar_distButton.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
 
-        ##FRAME CONTROLADOR DE PERIODE DISTÀNCIA
+#----------------FRAME CONTROLADOR DE PERIODE DISTÀNCIA----------------
 periode_dist_frame = LabelFrame(button_dist_frame, text = 'Modificar el periode de transmissió', font=("Arial", 10))
 periode_dist_frame.grid(row=1, column=0, columnspan = 2, padx=5, pady=5, sticky=N + S + E + W)
 
@@ -415,32 +789,264 @@ periode_dist_frame.rowconfigure(0, weight=1)
 periode_dist_frame.columnconfigure(0, weight=1)
 periode_dist_frame.columnconfigure(1, weight=1)
 
-Aplicar_distButton = Button(periode_dist_frame, text="Aplicar", bg='#4DA3FF', fg="white", font=("Arial", 20), command=canvi_periode_dist)
+Aplicar_distButton = Button(periode_dist_frame, text="Aplicar", bg='#4DA3FF', fg="white", font=("Arial", 15), command=canvi_periodedist)
 Aplicar_distButton.grid(row=0, column=1, padx=5, pady=5, sticky=N + S + E + W)
 
-frase_distEntry = Entry(periode_dist_frame, font=("Arial", 20))
+frase_distEntry = Entry(periode_dist_frame, font=("Arial", 15))
 frase_distEntry.grid(row=0, column=0, columnspan = 1, padx=5, pady=5, sticky=N + S + E + W)
 
-# FRAME GRÀFICA HT
+#─────────────────FRAME GRÀFICA HT─────────────────
 grafHT_frame = LabelFrame(window, text = 'Gràfica temperatura i humitat', font=("Arial", 15))
-grafHT_frame.grid(row=0, column=1, rowspan = 3, padx=5, pady=5, sticky=N + S + E + W)
+grafHT_frame.grid(row=0, column=1, rowspan = 4, padx=5, pady=5, sticky=N + S + E + W)
 
 grafHT_frame.rowconfigure(0, weight=1)
 grafHT_frame.columnconfigure(0, weight=1)
 
-# FRAME GRÀFICA DISTÀNCIA
+#─────────────────FRAME GRÀFICA DISTÀNCIA─────────────────
 graf_dist_frame = LabelFrame(window, text = 'Gràfica sensor de distància', font=("Arial", 15))
-graf_dist_frame.grid(row=0, column=2, rowspan = 3, padx=5, pady=5, sticky=N + S + E + W)
+graf_dist_frame.grid(row=0, column=2, rowspan = 1, padx=5, pady=5, sticky=N + S + E + W)
 
 graf_dist_frame.rowconfigure(0, weight=1)
 graf_dist_frame.columnconfigure(0, weight=1)
+
+#─────────────────FRAME SIMULADOR D'ÒRBITA─────────────────
+graf_orbita_frame = LabelFrame(window, text='Òrbita satèl·lit', font=("Arial", 15))
+graf_orbita_frame.grid(row=1, column=2, rowspan = 3, padx=5, pady=5, sticky=N + S + E + W)
+
+graf_orbita_frame.rowconfigure(0, weight=1)
+graf_orbita_frame.rowconfigure(1, weight=0)
+
+graf_orbita_frame.columnconfigure(0, weight=1)
+
+CanviGraf_distButton = Button(graf_orbita_frame, text="Canviar de gràfica", bg='#A78BFA', fg="white", font=("Arial", 15), command=canviar_grafica_orbita)
+CanviGraf_distButton.grid(row=1, column=0, padx=5, pady=5, sticky="ew")
+
+
+#-------------------Figura òrbita 2D-------------------------
+fig_orbita, ax_orbita = plt.subplots(figsize=(5, 4))
+
+orbit_plot, = ax_orbita.plot([], [], 'bo-', markersize=2, label='Òrbita')
+last_point_plot = ax_orbita.scatter([], [], color='red', s=50, label='Últim punt')
+
+# Cercle Terra (vista pol nord)
+earth_circle = plt.Circle((0, 0), R_EARTH, color='orange', fill=False, label='Terra')
+ax_orbita.add_artist(earth_circle)
+
+ax_orbita.set_xlim(-7e6, 7e6)
+ax_orbita.set_ylim(-7e6, 7e6)
+
+ax_orbita.set_aspect('equal', 'box')
+ax_orbita.set_xlabel('X (m)')
+ax_orbita.set_ylabel('Y (m)')
+ax_orbita.set_title('Òrbita equatorial (vista pol nord)')
+ax_orbita.grid(True)
+ax_orbita.legend()
+
+canvas_orbita = FigureCanvasTkAgg(fig_orbita, master=graf_orbita_frame)
+canvas_orbita.get_tk_widget().grid(row=0, column=0, padx=5, pady=5, sticky=N+S+E+W)
+canvas_orbita.draw()
+
+#─────────────────FRAME D'ESDEVENIMENTS / LOG─────────────────
+events_frame = LabelFrame(window, text='Registre d\'esdeveniments', font=("Arial", 15))
+events_frame.grid(row=2, rowspan=2, column=0, padx=5, pady=5, sticky=N+S+E+W)
+
+events_frame.rowconfigure(0, weight=0)
+events_frame.rowconfigure(1, weight=0)
+events_frame.rowconfigure(2, weight=1)
+events_frame.columnconfigure(0, weight=1)
+events_frame.columnconfigure(1, weight=1)
+events_frame.columnconfigure(2, weight=1)
+
+# 1) Entrada observacions usuari
+obs_label = Label(events_frame, text="Nova observació:", font=("Arial", 12))
+obs_label.grid(row=0, column=0, padx=5, pady=3, sticky="w")
+
+obs_entry = Entry(events_frame, font=("Arial", 12))
+obs_entry.grid(row=0, column=1, padx=5, pady=3, sticky="we")
+
+def on_add_observation():
+    text = obs_entry.get().strip()
+    if not text:
+        messagebox.showinfo("Info", "Introdueix una observació abans d'afegir.")
+        return
+    add_event("Observació", text)
+    obs_entry.delete(0, END)
+    #messagebox.showinfo("OK", "Observació afegida i guardada.")
+
+add_obs_btn = Button(events_frame, text="Afegeix observació", command=on_add_observation, bg="#4DA3FF", fg="white", font=("Arial", 12))
+add_obs_btn.grid(row=0, column=2, padx=5, pady=3, sticky="e")
+
+# 2) Filtres: tipus i rang de dates
+filter_type_label = Label(events_frame, text="Filtrar per tipus:", font=("Arial", 10))
+filter_type_label.grid(row=1, column=0, padx=5, pady=3, sticky="w")
+filter_type_cb = ttk.Combobox(events_frame, values=["Tots"] + EVENT_TYPES, state="readonly")
+filter_type_cb.set("Tots")
+filter_type_cb.grid(row=1, column=1, padx=5, pady=3, sticky="we")
+
+
+# Per simplificar la disposició, fem dues entrades petites a sota:
+filter_from_entry = Entry(events_frame, font=("Arial", 10))
+filter_to_entry = Entry(events_frame, font=("Arial", 10))
+
+# 3) Treeview per mostrar events
+cols = ("datetime", "type", "description")
+events_treeview = ttk.Treeview(events_frame, columns=cols, show="headings", height=8)
+events_treeview.heading("datetime", text="Data i hora")
+events_treeview.heading("type", text="Tipus")
+events_treeview.heading("description", text="Descripció")
+events_treeview.column("datetime", width=150)
+events_treeview.column("type", width=80)
+events_treeview.column("description", width=500)
+events_treeview.grid(row=2, column=0, columnspan=3, sticky=N+S+E+W, padx=5, pady=5)
+
+# scrollbar
+sv = ttk.Scrollbar(events_frame, orient="vertical", command=events_treeview.yview)
+events_treeview.configure(yscrollcommand=sv.set)
+sv.grid(row=2, column=3, sticky='ns', padx=0, pady=5)
+
+def refresh_events_treeview():
+    """Omple el treeview amb els events filtrats segons els controls."""
+    # Llegim filtres
+    ftype = filter_type_cb.get()
+    ffrom = filter_from_entry.get().strip()
+    fto = filter_to_entry.get().strip()
+
+    dt_from = _parse_dt(ffrom) if ffrom else None
+    dt_to = _parse_dt(fto) if fto else None
+
+    # netejar treeview
+    for i in events_treeview.get_children():
+        events_treeview.delete(i)
+
+    with events_lock:
+        for e in events:
+            if ftype != "Tots" and ftype and e["type"] != ftype:
+                continue
+            if dt_from and e["datetime"] < dt_from:
+                continue
+            if dt_to and e["datetime"] > dt_to:
+                continue
+            events_treeview.insert("", "end",
+                                   values=(_format_dt(e["datetime"]), e["type"], e["description"]))
+
+# Botons d'actualitzar i esborrar filtres
+def on_apply_filter():
+    try:
+        refresh_events_treeview()
+    except Exception as ex:
+        print("Error filtrant events:", ex)
+
+def on_clear_filters():
+    filter_type_cb.set("Tots")
+    filter_from_entry.delete(0, END)
+    filter_to_entry.delete(0, END)
+    refresh_events_treeview()
+
+apply_filter_btn = Button(events_frame, text="Aplica filtre", command=on_apply_filter)
+apply_filter_btn.grid(row=3, column=1, sticky="e", padx=5, pady=3)
+clear_filter_btn = Button(events_frame, text="Neteja filtres", command=on_clear_filters)
+clear_filter_btn.grid(row=3, column=2, sticky="w", padx=5, pady=3)
+
+# Carregar events guardats i pintar-los
+load_events_from_file()
+refresh_events_treeview()
+
+# ────────────────── FRAME MANUAL D’ORDRES ──────────────────
+manual_cmd_frame = LabelFrame(window, text='Enviar comanda manual', font=("Arial", 15))
+manual_cmd_frame.grid(row=6, column=0, columnspan = 3, padx=5, pady=5, sticky=N+S+E+W)
+
+manual_cmd_frame.columnconfigure(0, weight=1, uniform="col")
+manual_cmd_frame.columnconfigure(1, weight=1, uniform="col")
+manual_cmd_frame.columnconfigure(2, weight=1, uniform="col")
+manual_cmd_frame.columnconfigure(3, weight=1, uniform="col")
+manual_cmd_frame.columnconfigure(4, weight=1, uniform="col")
+
+# --- DESPLEGABLE ACCIONS (5 opcions) ---
+opcions_accions = ["Ordres", "Radar", "Mitjanes"]
+combo_accions = ttk.Combobox(manual_cmd_frame, values=opcions_accions, state="readonly", font=("Arial", 12))
+combo_accions.set("Selecciona acció")
+combo_accions.grid(row=0, column=0, padx=5, pady=5, sticky=E+W)
+
+# --- DESPLEGABLE ARGUMENTS (10 opcions) ---
+opcions_arguments = ["Stop","Seguir","Freqüència", "Escombreig", "Velocitat","Lock","Moure","Satèl.lit","Estació de terra"]
+combo_arguments = ttk.Combobox(manual_cmd_frame, values=opcions_arguments, state="readonly", font=("Arial", 12))
+combo_arguments.set("Selecciona argument")
+combo_arguments.grid(row=0, column=1, padx=5, pady=5, sticky=E+W)
+
+# --- ENTRY VALOR 1 ---
+entry_valor1 = Entry(manual_cmd_frame, font=("Arial", 12))
+entry_valor1.grid(row=0, column=2, padx=5, pady=5, sticky=E+W)
+
+# --- ENTRY VALOR 2 ---
+entry_valor2 = Entry(manual_cmd_frame, font=("Arial", 12))
+entry_valor2.grid(row=0, column=3, padx=5, pady=5, sticky=E+W)
+
+
+# --- BOTÓ D’ENVIAR ---
+def enviar_comanda_manual():
+    accio = combo_accions.get().lower()
+    argument = combo_arguments.get().lower()
+    v1 = entry_valor1.get().lower()
+    v2 = entry_valor2.get().lower()
+    
+    try:
+        if accio == "ordres":
+            if argument == "freqüència":
+                Send_Canvi_Frequencia(v1, int(v2))
+                add_event("Ordre", f"Canvi de freqüència: {v1}, {v2}")
+            elif argument == "seguir" or argument == "stop":
+                print(argument)
+                Send_Ordres(argument,v1)
+                add_event("Ordre", f"Ordre manual: {argument.lower()} {v1.lower()}")
+            else:
+                Notificació_Alarma(7)
+                
+
+        elif accio == "radar":
+            if argument == "lock":
+                Send_Radar(argument, int(v1), int(v2))
+                add_event("Radar", f"Radar Lock: {v1}, {v2}")
+            elif argument == "moure":
+                Send_Radar(argument, abs(int(v1)),0)
+                add_event("Radar", f"Moviment: {v1}")
+            elif argument == "velocitat":
+                Send_Radar(argument, abs(int(v1)),0)
+                add_event("Radar", f"Canvi de velocitat: {v1}")
+            else:
+                Notificació_Alarma(7)
+
+        elif accio == "mitjanes":
+            if argument == "satèl.lit":
+                print ("sat")
+                MitjanesArduinoTkinterFriendly()
+                add_event("Mitjanes", f"Satèl.lit")
+            elif argument == "estació de terra":
+                add_event("Mitjanes", f"Estació de terra")
+                activar_mitjanes_EstTerra(argument, 1)
+            else:
+                Notificació_Alarma(7)
+
+        else:
+            Notificació_Alarma(7)
+
+    except ValueError:    # Tant ValueError com UnboundLocalError són codis d'error que surten quant es crida una variable introduïnt uns paràmetres per els quals la variable no està preparada. És a dir, mostra els errors a l'hora de cirdar funcions
+        Notificació_Alarma(7) #Error de sintaxi
+    except UnboundLocalError:
+        Notificació_Alarma(7) #Error de sintaxi
+    except TypeError:
+        Notificació_Alarma(7) #Error de sintaxi
+
+
+
+send_cmd_btn = Button(manual_cmd_frame, text="Enviar", bg='#4DA3FF', fg="white", font=("Arial", 14), command=enviar_comanda_manual)
+send_cmd_btn.grid(row=0, column=4, padx=5, pady=5, sticky=E+W)
 
 
 # ───────────────────────────────────────────────
 # CONFIGURACIÓ DE LA FIGURA MATPLOTLIB
 # ───────────────────────────────────────────────
 
-#Grafica HT
+#-------------Grafica HT-------------
 fig, (axT, axH) = plt.subplots(2, 1, figsize=(5, 3), sharex=True)
 fig.subplots_adjust(hspace=0.4)
 axT.set_title("Temperatura (°C)")
@@ -463,7 +1069,7 @@ canvas.get_tk_widget().grid(row=0, column=0, padx=5, pady=5, sticky=N+S+E+W)
 canvas.draw()
 
 
-#Grafica Radar
+#-------------Grafica Radar-------------
 figdist = plt.figure(figsize=(5,4))
 axdist = figdist.add_subplot(111, projection='polar')
 axdist.set_thetamin(0)
@@ -478,6 +1084,19 @@ canvasRadar = FigureCanvasTkAgg(figdist, master=graf_dist_frame)
 canvasRadar.get_tk_widget().grid(row=0, column=0, sticky="nsew")
 canvasRadar.draw()
 
+#-------------Grafica Simulació de l'òrbita 2D-------------
+def draw_earth_slice(z):
+    if abs(z) <= R_EARTH:
+        slice_radius = (R_EARTH**2 - z**2)**0.5
+    else:
+        slice_radius = 0
+    earth_slice = plt.Circle((0, 0), slice_radius, color='orange',
+                             fill=False, linestyle='--', label='Tall Terra a Z')
+    return earth_slice
+
+earth_slice = draw_earth_slice(0)
+ax_orbita.add_artist(earth_slice)
+
 
 # ───────────────────────────────────────────────
 # FIL DE RECEPCIÓ DE DADES
@@ -486,44 +1105,77 @@ def recepcion():
     while True:
         if Debug_RecepcioSimulada == False :
             if mySerial and mySerial.in_waiting > 0:
-                linea = mySerial.readline().decode('utf-8').rstrip()
-                print("linea : "+str(linea))
-                #Rebem la línea d'informació
+                try:
+                    #Rebem la informació
+                    linea = mySerial.readline().decode('utf-8').rstrip()
+                    print("linea : "+str(linea))
+                    data_chunks = linea.split(';') #Type list // data[x] = Type: str
+    
+                except UnicodeDecodeError:
+                    print("Error en la rebuda de dades")
+                    Notificació_Alarma(3)
 
                 #Comprovem el checksum
-                """
-                Checksum_Missatge = linea.rsplit(";",1)[1] #Adruirim el ultim element de la llista, en aquest cas, el checksum
-                if Generar_Checksum(linea[0]) != Checksum_Missatge:
-                    #Error en el checksum
-                    Notificació_Alarma(3)
-                """
-                #iMPORTANT : DE MOMENT ESTÀ AIXI MENTRESTANT QUE EL CHECKSUM NO ESTÀ IMPLEMENTAT DEL TOT, UN COP SIUGI FUNCIONAL S'HA DE TREURE I DEIXAR NOMES EL ELSE
-                data_chunks = linea.split(';') #Type list // data[x] = Type: str
-                accio = data_chunks[0]
-                print("Acció : "+str(accio))
-                data = data_chunks[1].split(":")
-                print(data)
-                #OBSERVACIONS
-                if accio == "0": 
-                    #if len(data) == parametres: #Comprovació que rebem totes les dades
-                    contact.append(int(temps()))
-                    print("Humitat:", data[0])
-                    print("Temp:   ", data[1]) 
-                    print("Pos:", (int (data[2])/4779)*360)
-                    print("Dist:   ", data[3])
-                    print("Mitjana Hum:   ", data[4]) 
-                    print("Mitjana Temp:   ", data[5])
-                    #print(temps())
-                    histH.append(float(data[0]))
-                    histT.append(float(data[1]))
-                    histAng.append(float(data[2]))
-                    histDist.append(float(data[3]))
-                    histmitjH.append(float(data[4]))
-                    histmitjT.append(float(data[5]))
-                #ALARMES
-                    #elif accio == 1:
-                    #    Notificació_Alarma(data)
-                
+                if (len(data_chunks)>=3):
+                    try:
+                        Checksum_Missatge = linea.rsplit(";",1)[1] #Adruirim el ultim element de la llista, en aquest cas, el checksum
+                        MissatgeMenysChecksum = linea.rsplit(";",1)[0]
+                        print("Checksum Reconstruit: "+str(Generar_Checksum(MissatgeMenysChecksum)))
+                        print("Checksum rebut : " + str(Checksum_Missatge))
+                        
+
+                        if Generar_Checksum(MissatgeMenysChecksum) != int(Checksum_Missatge):
+                            #Error en el checksum
+                            #Implementar addevent
+                            Notificació_Alarma(3)
+                            print("-----ERROR_CHECKSUM-----")
+                        else:
+                            #iMPORTANT : DE MOMENT ESTÀ AIXI MENTRESTANT QUE EL CHECKSUM NO ESTÀ IMPLEMENTAT DEL TOT, UN COP SIUGI FUNCIONAL S'HA DE TREURE I DEIXAR NOMES EL ELSE
+                            data_chunks = linea.split(';') #Type list // data[x] = Type: str
+                            accio = data_chunks[0]
+                            print("Acció : "+str(accio))
+                            data = data_chunks[1].split(":")
+                            #print(data)
+                            #OBSERVACIONS
+                            if accio == "0": 
+                                #if len(data) == parametres: #Comprovació que rebem totes les dades
+                                contact.append(int(temps()))
+                                """
+                                print("Humitat:", data[0])
+                                print("Temp:   ", data[1]) 
+                                print("Pos:", (int (data[2])/4779)*360)
+                                print("Dist:   ", data[3])
+                                print("Mitjana Hum:   ", data[4]) 
+                                print("Mitjana Temp:   ", data[5])
+                                print("Temps òrbita:  ",data[6])
+                                print("Coord x:  ",data[7])
+                                print("Coord y:  ",data[8])
+                                print("Coord z:  ",data[9])
+                                """
+                                #print(temps())
+                                histH.append(float(data[0]))
+                                histT.append(float(data[1]))
+                                histAng.append(float(data[2]))
+                                histDist.append(float(data[3]))
+                                histmitjH.append(float(data[4]))
+                                histmitjT.append(float(data[5]))
+                                histTemps.append(float(data[6]))
+                                histCoordx.append(float(data[7]))
+                                histCoordy.append(float(data[8]))
+                                histCoordz.append(float(data[9]))
+                                label_mitjanaT_arduino.config(text=f"Mitjana T Arduino: {float(data[5]):.2f} °C")
+                                label_mitjanaH_arduino.config(text=f"Mitjana H Arduino: {float(data[4]):.2f} %")
+
+                            #ALARMES
+                            elif accio == "1": ##OJUT QUE CAL CAnviar aixó#################################################################################
+                                threadNotificacio = threading.Thread(target=Notificació_Alarma(int(data[0])))
+                                threadNotificacio.start()
+                    except IndexError or ValueError or UnboundLocalError:
+                        print("Error intern recepció INDEX OUT OF RANGE")
+                        Notificació_Alarma(3);    
+                else:
+                    print("ERROR: Falten arguments en el missatge")
+                    #Notificació_Alarma(3)   
                     
         else: 
             with data_lock: #No acabo d'entendre perque fem servir el thread.lock() si la variable que accedim no es compartida ni s'edita enlloc més
@@ -533,6 +1185,12 @@ def recepcion():
                 histDist.append(float("%.2f" % random.uniform(0,100)))
                 histmitjH.append(float("%.2f" % random.uniform(0,100)))
                 histmitjT.append(float("%.2f" % random.uniform(0,100)))
+                #histTemps.append(float(temps_sim))
+                histCoordx.append(float("%.2f" % random.uniform(-6500000,6500000)))
+                histCoordy.append(float("%.2f" % random.uniform(-6500000,6500000)))
+                histCoordz.append(float("%.2f" % random.uniform(-6500000,6500000)))
+                #temps_sim += 1
+                #threading.Event().wait(1.0)
                 contact.append(int(temps()))
                 #print(histH)
                 #print(contact)
@@ -541,10 +1199,9 @@ def recepcion():
         #actualitzar_grafica()
         #plt.pause(0.5)
 
-# ───────────────────────────────────────────────
-# ACTUALITZACIÓ DE LA GRÀFICA DINS TKINTER 
-# ───────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────
 #FUNCIÓ PER ACTUALITZAR LA GRÀFICA DE TEMPERATURA I HUMITAT
+# ─────────────────────────────────────────────────────────
 def actualitzar_graficaHT():
     try:
         if contact:
@@ -585,11 +1242,12 @@ def actualitzar_graficaHT():
 
             canvas.draw_idle()
 
-        window.after(500, actualitzar_graficaHT)
+        window.after(50, actualitzar_graficaHT)
+
+
 
     except Exception as e:
         print("ERROR a actualitzar_graficaHT:", e)
-
 
 # ───────────────────────────────────────────────
 # CÀLCUL DE MITJANA DE TEMPERATURES 
@@ -600,7 +1258,7 @@ def start_mitjanaT_label(histT, data_lock, parent_widget, interval=0.5, row=None
     #    Crea un Label a parent_widget i l'actualitza amb la mitjana de les últimes 10 temperatures.
 
 
-    mitjana_label = Label(parent_widget, text="Mitjana: --", font=("Arial", 20))
+    mitjana_label = Label(parent_widget, text="Mitjana: --", font=("Arial", 14))
     if row is None:
         mitjana_label.pack()
     else:
@@ -624,6 +1282,8 @@ def start_mitjanaT_label(histT, data_lock, parent_widget, interval=0.5, row=None
                                 consec_Tmax += 1
                                 if consec_Tmax == 3:
                                     print("ALERTA: 3 mitjanes consecutives de temperatura superen el límit (detectat per l'estació de terra)")
+                                    Notificació_Alarma(5)
+
                             else:       
                                 consec_Tmax = 0
                                 
@@ -652,7 +1312,7 @@ def start_mitjanaH_label(histH, data_lock, parent_widget, interval=0.5, row=None
     Crea un Label a parent_widget i l'actualitza amb la mitjana de les últimes 10 humitats.
     """
 
-    mitjana_label = Label(parent_widget, text="Mitjana: --", font=("Arial", 20))
+    mitjana_label = Label(parent_widget, text="Mitjana: --", font=("Arial", 14))
     if row is None:
         mitjana_label.pack()
     else:
@@ -676,6 +1336,7 @@ def start_mitjanaH_label(histH, data_lock, parent_widget, interval=0.5, row=None
                                 consec_Hmax += 1
                                 if consec_Hmax == 3:
                                     print("ALERTA: 3 mitjanes consecutives d'humitat superen el límit (detectat per l'estació de terra)")
+                                    Notificació_Alarma(6)
                             else:
                                 consec_Hmax = 0
 
@@ -739,9 +1400,128 @@ def actualitzar_grafica_radar():
     except Exception as e:
         print("ERROR a actualitzar_grafica_radar:", e)
 
+# ───────────────────────────────────────────────────────────────
+# FUNCIÓ PER ACTUALITZAR LA GRÀFICA DE SIMULACIÓ DE L'ÒRBITA 2D
+# ───────────────────────────────────────────────────────────────
+
+def update_orbit2D():
+    try:
+        if histCoordx and histCoordy:
+            # Actualitzar línia d’òrbita
+            orbit_plot.set_data(histCoordx, histCoordy)
+            last_point_plot.set_offsets([[histCoordx[-1], histCoordy[-1]]])
+
+            # Actualitzar tall de la Terra segons últim Z
+            global earth_slice
+            if histCoordz:
+                z = histCoordz[-1]
+            else:
+                z = 0
+
+            earth_slice.remove()
+            earth_slice = draw_earth_slice(z)
+            ax_orbita.add_artist(earth_slice)
+
+            canvas_orbita.draw_idle()
+
+        window.after(200, update_orbit2D)
+
+    except Exception as e:
+        print("ERROR a update_orbit2D:", e)
+
+# ───────────────────────────────────────────────────────────────
+# DIBUIX I ACTUALITZACIÓ DE LA GRÀFICA DE LA ÒRBITA 3D
+# ───────────────────────────────────────────────────────────────
+
+class GroundStationGUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Estació de Terra")
+
+        self.plot_frame = ttk.Frame(root)
+        self.plot_frame.pack(fill=tk.BOTH, expand=True)
+
+        self.orbit_plot = OrbitPlot3D(self.plot_frame)
+
+        # Iniciem el refresc
+        self.update_plot()
+
+    def update_plot(self):
+        # Aquí només llegeixes els vectors
+        self.orbit_plot.update(histCoordx, histCoordy, histCoordz)
+
+        # Torna a cridar-se cada 200 ms
+        self.root.after(200, self.update_plot)
+
+def update_orbit3D():
+    try:
+        orbit3d.update(histCoordx, histCoordy, histCoordz)
+        window.after(200, update_orbit3D)
+    except Exception as e:
+        print("ERROR a update_orbit3D:", e)
+
+def draw_earth_3d(ax, radius=R_EARTH):
+    u = np.linspace(0, 2 * np.pi, 60)
+    v = np.linspace(0, np.pi, 30)
+
+    x = radius * np.outer(np.cos(u), np.sin(v))
+    y = radius * np.outer(np.sin(u), np.sin(v))
+    z = radius * np.outer(np.ones(np.size(u)), np.cos(v))
+
+    ax.plot_surface(x, y, z, rstride=2, cstride=2, color='blue', alpha=0.4, linewidth=0)
+
+class OrbitPlot3D:
+    def __init__(self, parent):
+        self.fig = Figure(figsize=(6, 6))
+        self.ax = self.fig.add_subplot(111, projection='3d')
+        draw_earth_3d(self.ax, R_EARTH)
 
 
+        self.ax.set_title("Òrbita del satèl·lit")
+        self.ax.set_xlabel("X (m)")
+        self.ax.set_ylabel("Y (m)")
+        self.ax.set_zlabel("Z (m)")
 
+        self.ax.set_xlim(-7e6, 7e6)
+        self.ax.set_ylim(-7e6, 7e6)
+        self.ax.set_zlim(-7e6, 7e6)
+
+
+        self.ax.set_box_aspect([1, 1, 1])
+
+        self.canvas = FigureCanvasTkAgg(self.fig, master=parent)
+        self.canvas.get_tk_widget().grid(row=0, column=0, rowspan=1, sticky="nsew")
+
+        parent.rowconfigure(0, weight=1)
+        parent.columnconfigure(0, weight=1)
+
+
+        # Inicialitzem la línia (important!)
+        self.orbit_line, = self.ax.plot([], [], [], 'b', label="Òrbita")
+        self.last_point, = self.ax.plot([], [], [], 'ro', label="Últim punt")
+
+        self.ax.legend()
+
+    def update(self, x, y, z):
+        if len(x) < 2:
+            return
+
+        self.orbit_line.set_data(x, y)
+        self.orbit_line.set_3d_properties(z)
+
+        self.last_point.set_data([x[-1]], [y[-1]])
+        self.last_point.set_3d_properties([z[-1]])
+
+        self.ax.relim()
+        self.ax.autoscale_view()
+
+        self.canvas.draw_idle()
+
+
+orbit3d = OrbitPlot3D(graf_orbita_frame)
+orbit3d.canvas.get_tk_widget().grid_remove()
+
+    
 # ───────────────────────────────────────────────
 # LLANÇAR FIL I INICIAR GUI
 # ───────────────────────────────────────────────
@@ -752,17 +1532,27 @@ threadRecepcion.start()
 
 # iniciar actualització periòdica
 window.after(50, actualitzar_graficaHT)
-
 window.after(200, actualitzar_grafica_radar)
+window.after(200, update_orbit2D)
+window.after(200, update_orbit3D)
 
 
 def on_close():
     global running
     running = False
+    # Guardar events abans de tancar
+    try:
+        save_all_events_to_file()
+    except Exception as e:
+        print("Error guardant events al tancar:", e)
     if Debug_RecepcioSimulada == False:
         if mySerial:
             mySerial.close()
+        if mySerialOrbit:
+            mySerialOrbit.close()
     window.destroy()
 
+
+check_alarm() 
 window.protocol("WM_DELETE_WINDOW", on_close)
 window.mainloop()
